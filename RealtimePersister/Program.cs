@@ -1,5 +1,4 @@
-﻿using RealtimePersister.DataIngester.Impl;
-using System.Threading;
+﻿using System.Threading;
 
 namespace RealtimePersister
 {

@@ -1,9 +1,8 @@
 ﻿using RealtimePersister.Models.Simulation;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RealtimePersister.DataIngester.Impl
+namespace RealtimePersister
 {
     public class DataIngesterRunner
     {
@@ -54,6 +53,7 @@ namespace RealtimePersister.DataIngester.Impl
                     await _simulationLayer.SaveData(marketNo);
                 });
             }
+            await Task.WhenAll(marketTasks);
         }
     }
 }

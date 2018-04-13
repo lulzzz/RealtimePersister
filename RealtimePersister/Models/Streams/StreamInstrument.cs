@@ -24,9 +24,11 @@ namespace RealtimePersister.Models.Streams
         public int Compare(StreamInstrument other)
         {
             int ret = 0;
+#if false
             ret = Id.CompareTo(other.Id);
             if (ret != 0)
                 return ret;
+#endif
             ret = SubmarketId.CompareTo(other.SubmarketId);
             if (ret != 0)
                 return ret;
