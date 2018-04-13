@@ -14,7 +14,7 @@ namespace RealtimePersister
         {
             SimulationReceiver simulationReceiver = new SimulationReceiver(_dataLayer);
 
-            int numMarkets = 8;
+            int numThreads = 8;
             int numSubmarketsPerMarket = 4;
             int numInstrumentsPerMarket = 1000;
             int numPortfolios = 1000;
@@ -36,8 +36,8 @@ namespace RealtimePersister
             // initialize the data layer
             await _dataLayer.Initialize(cancellationToken, _persistenceLayer);
 
-            var marketTasks = new Task[numMarkets];
-            for (int marketNo = 0; marketNo < numMarkets; marketNo++)
+            var marketTasks = new Task[numThreads];
+            for (int marketNo = 0; marketNo < numThreads; marketNo++)
             {
                 marketTasks[marketNo] = Task.Run(async () =>
                 {
@@ -49,7 +49,6 @@ namespace RealtimePersister
                         await _simulationLayer.SaveData(marketNo);
                     }
                     await _simulationLayer.SimulatePrices(cancellationToken, marketNo, numPriceUpdatesPerSecond);
-
                     await _simulationLayer.SaveData(marketNo);
                 });
             }

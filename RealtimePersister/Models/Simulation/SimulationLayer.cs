@@ -29,13 +29,15 @@ namespace RealtimePersister.Models.Simulation
         public async Task LoadData(int marketNo)
         {
             await LoadMarkets($"market-{marketNo}.json");
-            await LoadPortfolios("portfolios.json");
+            if (marketNo == 0)
+                await LoadPortfolios("portfolios.json");
         }
 
         public async Task SaveData(int marketNo)
         {
             await SaveMarkets($"market-{marketNo}.json");
-            await SavePortfolios("portfolios.json");
+            if (marketNo == 0)
+                await SavePortfolios("portfolios.json");
         }
 
         public async Task<bool> GenerateData(int marketNo, int numSubmarketsPerMarket = 4, int numInstrumentsToGenerate = 1000,
