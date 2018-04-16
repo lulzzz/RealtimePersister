@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace RealtimePersister
 {
-    public class StreamItemPersisterInMemory<T> : StreamItemPersister<T> where T : StreamEntityBase
+    public class StreamItemPersisterQueue<T> : StreamItemPersister<T> where T : StreamEntityBase
     {
         private Dictionary<string, StreamItemPersisterState<T>> _dict1 =
             new Dictionary<string, StreamItemPersisterState<T>>();
@@ -16,7 +16,7 @@ namespace RealtimePersister
         private Dictionary<string, StreamItemPersisterState<T>> _processItems;
         private int _lockState = 0; // Idle = 0, Switching = 1, Adding = 2
 
-        public StreamItemPersisterInMemory(StreamEntityType entityType)
+        public StreamItemPersisterQueue(StreamEntityType entityType)
             : base(entityType)
         {
             _pendingItems = _dict1;

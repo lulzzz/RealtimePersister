@@ -29,15 +29,15 @@ namespace RealtimePersister
 
             if (ret)
             {
-                _streamItemPersisterMarket = new StreamItemPersisterInMemory<StreamMarket>(StreamEntityType.Market);
-                _streamItemPersisterSubmarket = new StreamItemPersisterInMemory<StreamSubmarket>(StreamEntityType.Submarket);
-                _streamItemPersisterInstrument = new StreamItemPersisterInMemory<StreamInstrument>(StreamEntityType.Instrument);
-                _streamItemPersisterPortfolio = new StreamItemPersisterInMemory<StreamPortfolio>(StreamEntityType.Portfolio);
-                _streamItemPersisterPosition = new StreamItemPersisterInMemory<StreamPosition>(StreamEntityType.Position);
-                _streamItemPersisterOrder = new StreamItemPersisterInMemory<StreamOrder>(StreamEntityType.Order);
-                _streamItemPersisterRule = new StreamItemPersisterInMemory<StreamRule>(StreamEntityType.Rule);
-                _streamItemPersisterPrice = new StreamItemPersisterInMemory<StreamPrice>(StreamEntityType.Price);
-                _streamItemPersisterTrade = new StreamItemPersisterInMemory<StreamTrade>(StreamEntityType.Trade);
+                _streamItemPersisterMarket = new StreamItemPersisterQueue<StreamMarket>(StreamEntityType.Market);
+                _streamItemPersisterSubmarket = new StreamItemPersisterQueue<StreamSubmarket>(StreamEntityType.Submarket);
+                _streamItemPersisterInstrument = new StreamItemPersisterQueue<StreamInstrument>(StreamEntityType.Instrument);
+                _streamItemPersisterPortfolio = new StreamItemPersisterQueue<StreamPortfolio>(StreamEntityType.Portfolio);
+                _streamItemPersisterPosition = new StreamItemPersisterQueue<StreamPosition>(StreamEntityType.Position);
+                _streamItemPersisterOrder = new StreamItemPersisterQueue<StreamOrder>(StreamEntityType.Order);
+                _streamItemPersisterRule = new StreamItemPersisterQueue<StreamRule>(StreamEntityType.Rule);
+                _streamItemPersisterPrice = new StreamItemPersisterQueue<StreamPrice>(StreamEntityType.Price);
+                _streamItemPersisterTrade = new StreamItemPersisterQueue<StreamTrade>(StreamEntityType.Trade);
                 Task.Run(async () =>
                         {
                             await ProcessPendingItems(cancellationToken);
