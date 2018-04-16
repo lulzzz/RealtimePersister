@@ -80,8 +80,9 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimulationReceiver.cs" />
-    <Compile Include="StreamItemPersisterQueue.cs" />
-    <Compile Include="StreamItemPersisterQueueInMemory.cs" />
+    <Compile Include="StreamEntityPersister.cs" />
+    <Compile Include="StreamEntityPersisterQueue.cs" />
+    <Compile Include="StreamEntityPersisterQueueInMemory.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

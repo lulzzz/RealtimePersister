@@ -6,24 +6,24 @@ using System.Threading.Tasks;
 
 namespace RealtimePersister
 {
-    public class StreamItemPersisterQueueInMemory<T> : StreamItemPersisterQueue<T> where T : StreamEntityBase
+    public class StreamEntityPersisterQueueInMemory : StreamEntityPersisterQueue
     {
-        private Dictionary<string, StreamItemPersisterState<T>> _dict1 =
-            new Dictionary<string, StreamItemPersisterState<T>>();
-        private Dictionary<string, StreamItemPersisterState<T>> _dict2 =
-            new Dictionary<string, StreamItemPersisterState<T>>();
-        private Dictionary<string, StreamItemPersisterState<T>> _pendingItems;
-        private Dictionary<string, StreamItemPersisterState<T>> _processItems;
+        private Dictionary<string, StreamEntityPersisterItem> _dict1 =
+            new Dictionary<string, StreamEntityPersisterItem>();
+        private Dictionary<string, StreamEntityPersisterItem> _dict2 =
+            new Dictionary<string, StreamEntityPersisterItem>();
+        private Dictionary<string, StreamEntityPersisterItem> _pendingItems;
+        private Dictionary<string, StreamEntityPersisterItem> _processItems;
         private int _lockState = 0; // Idle = 0, Switching = 1, Adding = 2
 
-        public StreamItemPersisterQueueInMemory(StreamEntityType entityType, int partitionKey)
-            : base(entityType, partitionKey)
+        public StreamEntityPersisterQueueInMemory(StreamEntityType entityType, int partitionKey, int holdOffBusy = 0, int holdOffIdle = 100)
+            : base(entityType, partitionKey, holdOffBusy, holdOffIdle)
         {
             _pendingItems = _dict1;
             _processItems = _dict2;
         }
 
-        public override Task ProcessStreamItem(T item)
+        public override Task ProcessStreamItem(StreamEntityBase item)
         {
             if (item != null)
             {
@@ -34,9 +34,9 @@ namespace RealtimePersister
                     lockState = Interlocked.CompareExchange(ref _lockState, 2, 0);
                 }
 
-                if (!_pendingItems.TryGetValue(item.Id, out StreamItemPersisterState<T> state))
+                if (!_pendingItems.TryGetValue(item.Id, out StreamEntityPersisterItem persiterItem))
                 {
-                    _pendingItems.Add(item.Id, new StreamItemPersisterState<T>()
+                    _pendingItems.Add(item.Id, new StreamEntityPersisterItem()
                     {
                         UpsertItem = (item.Operation == StreamOperation.Insert ||
                                         item.Operation == StreamOperation.Update ? item : null),
@@ -45,21 +45,21 @@ namespace RealtimePersister
                 }
                 else if (item.Operation == StreamOperation.Insert ||
                                         item.Operation == StreamOperation.Update)
-                    state.UpsertItem = item;
+                    persiterItem.UpsertItem = item;
                 else if (item.Operation == StreamOperation.Delete)
-                    state.DeleteItem = item;
+                    persiterItem.DeleteItem = item;
 
                 Interlocked.Exchange(ref _lockState, 0);
             }
             return Task.CompletedTask;
         }
 
-        public override async Task<bool> ProcessPendingItems(IStreamPersister persister, CancellationToken cancellationToken, int maxItems = 50)
+        public override async Task ProcessPendingItems(IStreamPersister persister, CancellationToken cancellationToken, int maxItems = 50)
         {
-            bool anyDataProcessed = false;
-
-            if (persister != null)
+            while (!cancellationToken.IsCancellationRequested)
             {
+                bool anyDataProcessed = false;
+
                 SwitchDictionaries();
                 while (_processItems.Values.Any())
                 {
@@ -68,26 +68,30 @@ namespace RealtimePersister
 
                     while (_processItems.Values.Any() && storedItems <= maxItems && !cancellationToken.IsCancellationRequested)
                     {
-                        if (persister.SupportsBatches && batch == null)
-                            batch = await persister.CreateBatch(_entityType);
-
-                        var processItemPair = _processItems.First();
-                        if (_processItems.Remove(processItemPair.Key))
+                        if (persister != null)
                         {
-                            if (processItemPair.Value.DeleteItem != null)
-                                await persister.Delete(processItemPair.Value.DeleteItem, batch);
-                            else if (processItemPair.Value.UpsertItem != null)
-                                await persister.Upsert(processItemPair.Value.UpsertItem, batch);
-                            storedItems++;
-                            anyDataProcessed = true;
+                            if (persister.SupportsBatches && batch == null)
+                                batch = await persister.CreateBatch(_entityType);
+
+                            var processItemPair = _processItems.First();
+                            if (_processItems.Remove(processItemPair.Key))
+                            {
+                                if (processItemPair.Value.DeleteItem != null)
+                                    await persister.Delete(processItemPair.Value.DeleteItem, batch);
+                                else if (processItemPair.Value.UpsertItem != null)
+                                    await persister.Upsert(processItemPair.Value.UpsertItem, batch);
+                                storedItems++;
+                                anyDataProcessed = true;
+                            }
                         }
                     }
 
                     if (batch != null)
                         await batch.Commit();
                 }
+
+                await Task.Delay(anyDataProcessed ? _holdOffBusy : _holdOffIdle);
             }
-            return anyDataProcessed;
         }
 
         private void SwitchDictionaries()
@@ -111,6 +115,5 @@ namespace RealtimePersister
             }
             Interlocked.Exchange(ref _lockState, 0);
         }
-
     }
 }
