@@ -1,9 +1,8 @@
 ﻿using RealtimePersister.Models.Simulation;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RealtimePersister.DataIngester.Impl
+namespace RealtimePersister
 {
     public class DataIngesterRunner
     {
@@ -15,7 +14,7 @@ namespace RealtimePersister.DataIngester.Impl
         {
             SimulationReceiver simulationReceiver = new SimulationReceiver(_dataLayer);
 
-            int numMarkets = 8;
+            int numThreads = 8;
             int numSubmarketsPerMarket = 4;
             int numInstrumentsPerMarket = 1000;
             int numPortfolios = 1000;
@@ -37,8 +36,8 @@ namespace RealtimePersister.DataIngester.Impl
             // initialize the data layer
             await _dataLayer.Initialize(cancellationToken, _persistenceLayer);
 
-            var marketTasks = new Task[numMarkets];
-            for (int marketNo = 0; marketNo < numMarkets; marketNo++)
+            var marketTasks = new Task[numThreads];
+            for (int marketNo = 0; marketNo < numThreads; marketNo++)
             {
                 marketTasks[marketNo] = Task.Run(async () =>
                 {
@@ -50,10 +49,10 @@ namespace RealtimePersister.DataIngester.Impl
                         await _simulationLayer.SaveData(marketNo);
                     }
                     await _simulationLayer.SimulatePrices(cancellationToken, marketNo, numPriceUpdatesPerSecond);
-
                     await _simulationLayer.SaveData(marketNo);
                 });
             }
+            await Task.WhenAll(marketTasks);
         }
     }
 }

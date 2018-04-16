@@ -23,9 +23,11 @@ namespace RealtimePersister.Models.Streams
         public int Compare(StreamOrder other)
         {
             int ret = 0;
+#if false
             ret = Id.CompareTo(other.Id);
             if (ret != 0)
                 return ret;
+#endif
             ret = PortfolioId.CompareTo(other.PortfolioId);
             if (ret != 0)
                 return ret;
