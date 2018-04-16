@@ -1,116 +1,48 @@
 ﻿using RealtimePersister.Models.Streams;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace RealtimePersister
 {
-    public class StreamItemPersisterQueue<T> : StreamItemPersister<T> where T : StreamEntityBase
+    public class StreamItemPersisterState<T> where T : StreamEntityBase
     {
-        private Dictionary<string, StreamItemPersisterState<T>> _dict1 =
-            new Dictionary<string, StreamItemPersisterState<T>>();
-        private Dictionary<string, StreamItemPersisterState<T>> _dict2 =
-            new Dictionary<string, StreamItemPersisterState<T>>();
-        private Dictionary<string, StreamItemPersisterState<T>> _pendingItems;
-        private Dictionary<string, StreamItemPersisterState<T>> _processItems;
-        private int _lockState = 0; // Idle = 0, Switching = 1, Adding = 2
+        public T UpsertItem { get; set; }
+        public T DeleteItem { get; set; }
+    }
 
-        public StreamItemPersisterQueue(StreamEntityType entityType)
-            : base(entityType)
+    public abstract class StreamItemPersisterQueue<T> where T : StreamEntityBase
+    {
+        protected StreamEntityType _entityType;
+        protected int _partitionKey;
+
+        public StreamItemPersisterQueue(StreamEntityType entityType, int partitionKey)
         {
-            _pendingItems = _dict1;
-            _processItems = _dict2;
+            _entityType = entityType;
+            _partitionKey = partitionKey;
         }
 
-        public override Task ProcessStreamItem(T item)
+
+        public abstract Task ProcessStreamItem(T item);
+        public abstract Task<bool> ProcessPendingItems(IStreamPersister persister, CancellationToken cancellationToken, int maxItems = 50);
+
+#region Get functions
+        public Task<IEnumerable<T>> GetAll(IStreamPersister persister, StreamEntityType entityType)
         {
-            if (item != null)
-            {
-                var lockState = Interlocked.CompareExchange(ref _lockState, 2, 0);
-                while (lockState != 0)
-                {
-                    Thread.SpinWait(10);
-                    lockState = Interlocked.CompareExchange(ref _lockState, 2, 0);
-                }
-
-                if (!_pendingItems.TryGetValue(item.Id, out StreamItemPersisterState<T> state))
-                {
-                    _pendingItems.Add(item.Id, new StreamItemPersisterState<T>()
-                    {
-                        UpsertItem = (item.Operation == StreamOperation.Insert ||
-                                        item.Operation == StreamOperation.Update ? item : null),
-                        DeleteItem = (item.Operation == StreamOperation.Delete ? item : null)
-                    });
-                }
-                else if (item.Operation == StreamOperation.Insert ||
-                                        item.Operation == StreamOperation.Update)
-                    state.UpsertItem = item;
-                else if (item.Operation == StreamOperation.Delete)
-                    state.DeleteItem = item;
-
-                Interlocked.Exchange(ref _lockState, 0);
-            }
-            return Task.CompletedTask;
+            return (persister != null ? persister.GetAll<T>(entityType) : Task.FromResult<IEnumerable<T>>(null));
         }
 
-        public override async Task<bool> ProcessPendingItems(IStreamPersister persister, CancellationToken cancellationToken, int maxItems = 50)
+        public Task<T> GetById(IStreamPersister persister, StreamEntityType entityType, string id)
         {
-            bool anyDataProcessed = false;
-
-            if (persister != null)
-            {
-                SwitchDictionaries();
-                while (_processItems.Values.Any())
-                {
-                    int storedItems = 0;
-                    IStreamPersisterBatch batch = null;
-
-                    while (_processItems.Values.Any() && storedItems <= maxItems && !cancellationToken.IsCancellationRequested)
-                    {
-                        if (persister.SupportsBatches && batch == null)
-                            batch = await persister.CreateBatch(_entityType);
-
-                        var processItemPair = _processItems.First();
-                        if (_processItems.Remove(processItemPair.Key))
-                        {
-                            if (processItemPair.Value.DeleteItem != null)
-                                await persister.Delete(processItemPair.Value.DeleteItem, batch);
-                            else if (processItemPair.Value.UpsertItem != null)
-                                await persister.Upsert(processItemPair.Value.UpsertItem, batch);
-                            storedItems++;
-                            anyDataProcessed = true;
-                        }
-                    }
-
-                    if (batch != null)
-                        await batch.Commit();
-                }
-            }
-            return anyDataProcessed;
+            return (persister != null ? persister.GetById<T>(entityType, id) : Task.FromResult<T>(null));
         }
 
-        private void SwitchDictionaries()
+        public Task<IEnumerable<T>> GetFromSequenceNumber(IStreamPersister persister, StreamEntityType entityType,
+                UInt64 sequenceNumberStart = UInt64.MinValue, UInt64 sequenceNumberEnd = UInt64.MaxValue)
         {
-            var lockState = Interlocked.CompareExchange(ref _lockState, 1, 0);
-            while (lockState != 0)
-            {
-                Thread.SpinWait(10);
-                lockState = Interlocked.CompareExchange(ref _lockState, 1, 0);
-            }
-
-            if (_pendingItems == _dict1)
-            {
-                _pendingItems = _dict2;
-                _processItems = _dict1;
-            }
-            else
-            {
-                _pendingItems = _dict1;
-                _processItems = _dict2;
-            }
-            Interlocked.Exchange(ref _lockState, 0);
+            return (persister != null ? persister.GetFromSequenceNumber<T>(entityType, sequenceNumberStart, sequenceNumberEnd) : Task.FromResult<IEnumerable<T>>(null));
         }
-
+#endregion
     }
 }
