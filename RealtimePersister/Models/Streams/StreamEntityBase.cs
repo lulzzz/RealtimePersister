@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -22,6 +23,8 @@ namespace RealtimePersister.Models.Streams
         public UInt64 SequenceNumber { get; set; }
         public StreamEntityType EntityType { get; private set; }
         public StreamOperation Operation { get; set; }
+
+        [JsonProperty("id")]
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public DateTime Date { get; set; } = DateTime.UtcNow;
     }

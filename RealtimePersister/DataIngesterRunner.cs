@@ -1,4 +1,5 @@
-﻿using RealtimePersister.Models.Simulation;
+﻿using RealtimePersister.CosmosDb;
+using RealtimePersister.Models.Simulation;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -25,7 +26,7 @@ namespace RealtimePersister
             _simulationLayer = new SimulationLayer(simulationReceiver);
 
             // Persister Factory
-            IStreamPersisterFactory persisterFactory = null; /* TODO */
+            IStreamPersisterFactory persisterFactory = new CosmosDbStreamPersisterFactory();
             IStreamPersister persister = null;
 
             if (persisterFactory != null)
