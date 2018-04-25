@@ -7,7 +7,7 @@ namespace RealtimePersister.Redis
     public class RedisStreamPersisterBatch : IStreamPersisterBatch
     {
         public IBatch Batch { get; private set; }
-        public List<Task> Tasks { get; } = new List<Task>();
+        protected List<Task> Tasks { get; } = new List<Task>();
 
         public RedisStreamPersisterBatch(IDatabase db)
         {
@@ -18,6 +18,14 @@ namespace RealtimePersister.Redis
         {
             Batch.Execute();
             await Task.WhenAll(Tasks);
+        }
+
+        public void AddTask(Task task)
+        {
+            lock (this)
+            {
+                Tasks.Add(task);
+            }
         }
     }
 }

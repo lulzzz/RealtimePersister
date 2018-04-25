@@ -61,7 +61,7 @@ namespace RealtimePersister.Redis
             if (batch != null)
             {
                 RedisStreamPersisterBatch stx = batch as RedisStreamPersisterBatch;
-                stx.Tasks.Add(stx.Batch.HashSetAsync($"{_databaseName}-{item.EntityType}", item.Id, data));
+                stx.AddTask(stx.Batch.HashSetAsync($"{_databaseName}-{item.EntityType}", item.Id, data));
             }
             else
                 await _db.HashSetAsync($"{_databaseName}-{item.EntityType}", item.Id, data);
@@ -73,7 +73,7 @@ namespace RealtimePersister.Redis
             if (batch != null)
             {
                 RedisStreamPersisterBatch stx = batch as RedisStreamPersisterBatch;
-                stx.Tasks.Add(stx.Batch.HashDeleteAsync($"{_databaseName}-{item.EntityType}", item.Id));
+                stx.AddTask(stx.Batch.HashDeleteAsync($"{_databaseName}-{item.EntityType}", item.Id));
             }
             else
                 await _db.HashDeleteAsync($"{_databaseName}-{item.EntityType}", item.Id);

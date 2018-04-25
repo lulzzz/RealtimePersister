@@ -25,7 +25,8 @@ namespace RealtimePersister
             _simulationLayer = new SimulationLayer(simulationReceiver);
 
             // Persister Factory
-            IStreamPersisterFactory persisterFactory = new RealtimePersister.Redis.StreamPersisterFactory("localhost");
+            IStreamPersisterFactory persisterFactory = new RealtimePersister.Redis.StreamPersisterFactory("pb-syncweek-redis.redis.cache.windows.net:6380,password=IG1aBMjxzo0uE106LJT+Ceigc1AZldzwd9HYDDKIdBc=,ssl=True,abortConnect=False");
+            //IStreamPersisterFactory persisterFactory = new RealtimePersister.Redis.StreamPersisterFactory("localhost");
             IStreamPersister persister = null;
 
             if (persisterFactory != null)
