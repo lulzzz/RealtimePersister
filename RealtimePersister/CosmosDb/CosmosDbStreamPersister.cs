@@ -71,8 +71,10 @@ namespace RealtimePersister.CosmosDb
         public async Task Upsert(StreamEntityBase item, IStreamPersisterBatch batch = null)
         {
             var collectionUri = UriFactory.CreateDocumentCollectionUri(_database, _collection);
-            await _client.UpsertDocumentAsync(collectionUri, item,
-                new RequestOptions { PartitionKey = new PartitionKey(item.Id) });
+
+            var response = await _client.UpsertDocumentAsync(collectionUri, item,
+                    new RequestOptions { PartitionKey = new PartitionKey(item.Id) });
+
         }
 
         public async Task Delete(StreamEntityBase item, IStreamPersisterBatch batch = null)

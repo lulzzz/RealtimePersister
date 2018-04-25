@@ -48,11 +48,21 @@ namespace RealtimePersister
                     if (addedData) {
                         await _simulationLayer.SaveData(marketNoCopy);
                     }
+                });
+            }
+            await Task.WhenAll(marketTasks);
+            
+            for (int marketNo = 0; marketNo < numThreads; marketNo++)
+            {
+                var marketNoCopy = marketNo;
+                marketTasks[marketNoCopy] = Task.Run(async () =>
+                {
                     await _simulationLayer.SimulatePrices(cancellationToken, marketNoCopy, numPriceUpdatesPerSecond);
                     await _simulationLayer.SaveData(marketNoCopy);
                 });
             }
             await Task.WhenAll(marketTasks);
+            
         }
     }
 }
