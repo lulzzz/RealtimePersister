@@ -46,6 +46,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="RedisStreamPersisterFactory.cs" />
     <Compile Include="DataIngesterRunner.cs" />
     <Compile Include="DataLayer.cs" />
     <Compile Include="IStreamPersister.cs" />

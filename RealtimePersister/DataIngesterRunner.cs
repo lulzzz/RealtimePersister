@@ -10,26 +10,43 @@ namespace RealtimePersister
         private PersistenceLayer _persistenceLayer = new PersistenceLayer();
         private SimulationLayer _simulationLayer = null;
 
+        private int numThreads ;
+        private int numSubmarketsPerMarket ;
+        private int numInstrumentsPerMarket ;
+        private int numPortfolios;
+        private int maxPositionsPerPortfolio;
+        private int maxRulesPerPortfolio;
+        private int numPriceUpdatesPerSecond;
+        private IStreamPersisterFactory streamPersisterFactory;
+        //private int typeOfPersister;
+
+        public DataIngesterRunner(int numThreads, int numSubmarketsPerMarket, int numInstrumentsPerMarket, int numPortfolios, int maxPositionsPerPortfolio, int maxRulesPerPortfolio, int numPriceUpdatesPerSecond, IStreamPersisterFactory streamPersisterFactory)
+        {
+            this.numThreads = numThreads;
+            this.numSubmarketsPerMarket = numSubmarketsPerMarket;
+            this.numInstrumentsPerMarket = numInstrumentsPerMarket;
+            this.numPortfolios = numPortfolios;
+            this.maxPositionsPerPortfolio = maxPositionsPerPortfolio;
+            this.maxRulesPerPortfolio = maxRulesPerPortfolio;
+            this.numPriceUpdatesPerSecond = numPriceUpdatesPerSecond;
+            this.streamPersisterFactory = streamPersisterFactory;
+        }
+
         public async Task RunSimulationAsync(CancellationToken cancellationToken)
         {
             SimulationReceiver simulationReceiver = new SimulationReceiver(_dataLayer);
-
-            int numThreads = 8;
-            int numSubmarketsPerMarket = 4;
-            int numInstrumentsPerMarket = 1000;
-            int numPortfolios = 1000;
-            int maxPositionsPerPortfolio = 50;
-            int maxRulesPerPortfolio = 20;
-            int numPriceUpdatesPerSecond = 0; // this is per market (or thread). 0 means as fast as possible
-
+            System.Diagnostics.Debug.WriteLine("Started Simulator");
+            
             _simulationLayer = new SimulationLayer(simulationReceiver);
 
             // Persister Factory
-            IStreamPersisterFactory persisterFactory = null; /* TODO */
             IStreamPersister persister = null;
 
-            if (persisterFactory != null)
-                persister = persisterFactory.CreatePersister("DataIngester");
+            if (streamPersisterFactory != null)
+            {
+                persister = streamPersisterFactory.CreatePersister("DataIngester");
+                System.Diagnostics.Debug.WriteLine("Creating Data Persister");
+            }  
 
             // initialize the persistence layer
             var ret = await _persistenceLayer.Initialize(persister, cancellationToken);
