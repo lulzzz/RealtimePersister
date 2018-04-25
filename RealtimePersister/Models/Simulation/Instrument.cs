@@ -1,6 +1,7 @@
 ﻿using RealtimePersister.Models.Streams;
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace RealtimePersister.Models.Simulation
 {
@@ -25,6 +26,8 @@ namespace RealtimePersister.Models.Simulation
             };
         }
 
+        static long _sequencenumber = 0;
+
         public StreamPrice ToPriceStream(StreamOperation operation)
         {
             return new StreamPrice()
@@ -32,7 +35,8 @@ namespace RealtimePersister.Models.Simulation
                 Id = "Price:" + Id.Substring(11),
                 PriceLatest = PriceLatest,
                 PriceDate = PriceDate,
-                Operation = operation
+                Operation = operation,
+                SequenceNumber = (ulong)Interlocked.Increment(ref _sequencenumber)
             };
         }
     }

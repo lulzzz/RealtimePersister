@@ -99,8 +99,15 @@ namespace RealtimePersister
             }
         }
 
+        static ulong _sequencenumber = 0;
+
         private async Task UpsertPrice(StreamPrice price)
         {
+            if ((price.SequenceNumber < _sequencenumber) && (_sequencenumber != 0)) {
+                Debugger.Break();
+            }
+            _sequencenumber = price.SequenceNumber;
+
             var InsertCmd = new SqlCommand();
             await Insert(InsertCmd, () =>
             {
@@ -110,11 +117,12 @@ namespace RealtimePersister
                 var SubmarketId = int.Parse(InstrumentIdSplit[1]);
                 var Id = int.Parse(InstrumentIdSplit[2]);
 
-                InsertCmd.CommandText = "exec UpsertRule @InstrumentId, @Price, @PriceLatest, @Timestamp";
+                InsertCmd.CommandText = "exec UpsertPrice @InstrumentId, @Price, @PriceLatest, @Timestamp, @SequenceNumber";
                 InsertCmd.Parameters.Add("@InstrumentId", SqlDbType.Int).Value = (MarketId * 10 + SubmarketId) * 1000000 + Id;
-                InsertCmd.Parameters.Add("@Price", SqlDbType.Int).Value = price.PriceLatest;
+                InsertCmd.Parameters.Add("@Price", SqlDbType.Float).Value = price.PriceLatest;
                 InsertCmd.Parameters.Add("@Pricelatest", SqlDbType.DateTime).Value = price.Date;
                 InsertCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = price.Date;
+                InsertCmd.Parameters.Add("@SequenceNumber", SqlDbType.BigInt).Value = price.SequenceNumber;
             });
         }
 
