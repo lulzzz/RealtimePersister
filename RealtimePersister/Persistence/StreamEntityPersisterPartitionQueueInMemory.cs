@@ -45,20 +45,15 @@ namespace RealtimePersister
                 }
 
                 var pendingItems = PendingItems;
-                if (!pendingItems.TryGetValue(item.Id, out StreamEntityPersisterItem persiterItem))
+                lock (this)
                 {
-                    pendingItems.Add(item.Id, new StreamEntityPersisterItem()
+                    pendingItems[item.Id] = new StreamEntityPersisterItem()
                     {
                         UpsertItem = (item.Operation == StreamOperation.Insert ||
                                         item.Operation == StreamOperation.Update ? item : null),
                         DeleteItem = (item.Operation == StreamOperation.Delete ? item : null)
-                    });
+                    };
                 }
-                else if (item.Operation == StreamOperation.Insert ||
-                                        item.Operation == StreamOperation.Update)
-                    persiterItem.UpsertItem = item;
-                else if (item.Operation == StreamOperation.Delete)
-                    persiterItem.DeleteItem = item;
 
                 if (item.Operation == StreamOperation.Insert || item.Operation == StreamOperation.Update)
                     Interlocked.Increment(ref _numUpserts);
@@ -103,6 +98,11 @@ namespace RealtimePersister
 
                                 Interlocked.Increment(ref _numProcessedItems);
                             }
+                        }
+                        else
+                        {
+                            Interlocked.Add(ref _numProcessedItems, processItems.Count);
+                            processItems.Clear();
                         }
                     }
 

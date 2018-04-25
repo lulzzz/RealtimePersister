@@ -1,7 +1,12 @@
 ﻿using System;
+using Newtonsoft.Json;
+using ProtoBuf;
+using System.Runtime.Serialization;
 
 namespace RealtimePersister.Models.Streams
 {
+    [DataContract]
+    [ProtoContract]
     public class StreamPortfolio : StreamEntityBase
     {
         public StreamPortfolio() :
@@ -9,8 +14,17 @@ namespace RealtimePersister.Models.Streams
         {
         }
 
+        [JsonProperty(PropertyName = "name")]
+        [DataMember]
+        [ProtoMember(7)]
         public string Name { get; set; }
+        [JsonProperty(PropertyName = "balance")]
+        [DataMember]
+        [ProtoMember(8)]
         public double Balance { get; set; }
+        [JsonProperty(PropertyName = "checkrules")]
+        [DataMember]
+        [ProtoMember(9)]
         public bool CheckRules { get; set; }
 
         public override int GetPartitionKey(int partitionCount)
@@ -21,11 +35,9 @@ namespace RealtimePersister.Models.Streams
         public int Compare(StreamPortfolio other)
         {
             int ret = 0;
-#if false
             ret = Id.CompareTo(other.Id);
             if (ret != 0)
                 return ret;
-#endif
             ret = Name.CompareTo(other.Name);
             if (ret != 0)
                 return ret;

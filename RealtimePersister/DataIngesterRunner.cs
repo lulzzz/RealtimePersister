@@ -27,6 +27,7 @@ namespace RealtimePersister
 
             // Persister Factory
             IStreamPersisterFactory persisterFactory = new CosmosDbStreamPersisterFactory();
+            //IStreamPersisterFactory persisterFactory = new RealtimePersister.Redis.StreamPersisterFactory("localhost");
             IStreamPersister persister = null;
 
             if (persisterFactory != null)

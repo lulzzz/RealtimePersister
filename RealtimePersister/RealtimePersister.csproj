@@ -41,9 +41,21 @@
     <Reference Include="Newtonsoft.Json, Version=11.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>packages\Newtonsoft.Json.11.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="protobuf-net, Version=2.3.7.0, Culture=neutral, PublicKeyToken=257b51d87d2e4d67, processorArchitecture=MSIL">
+      <HintPath>packages\protobuf-net.2.3.7\lib\net40\protobuf-net.dll</HintPath>
+    </Reference>
+    <Reference Include="StackExchange.Redis, Version=1.2.7.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\StackExchange.Redis.1.2.7-alpha-00002\lib\net46\StackExchange.Redis.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression, Version=4.1.2.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>packages\System.IO.Compression.4.3.0\lib\net46\System.IO.Compression.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -92,6 +104,9 @@
     <Compile Include="Persistence\StreamEntityPersisterPartitionQueueInMemory.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Redis\RedisStreamPersisterBatch.cs" />
+    <Compile Include="Redis\RedisStreamPersister.cs" />
+    <Compile Include="Redis\RedisStreamPersisterFactory.cs" />
     <Compile Include="SimulationReceiver.cs" />
   </ItemGroup>
   <ItemGroup>
