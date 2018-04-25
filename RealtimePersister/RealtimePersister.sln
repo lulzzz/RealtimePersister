@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.27428.2015
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealtimePersister", "RealtimePersister.csproj", "{D7315ABE-E0AA-4849-9127-51A0AC94FCDD}"
 EndProject
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "StreamEntityPersistDb", "..\sql\StreamEntityPersistDb\StreamEntityPersistDb.sqlproj", "{3593B929-A47B-47EC-B913-ACFAC7667C9E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,12 @@ Global
 		{D7315ABE-E0AA-4849-9127-51A0AC94FCDD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D7315ABE-E0AA-4849-9127-51A0AC94FCDD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D7315ABE-E0AA-4849-9127-51A0AC94FCDD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3593B929-A47B-47EC-B913-ACFAC7667C9E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3593B929-A47B-47EC-B913-ACFAC7667C9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3593B929-A47B-47EC-B913-ACFAC7667C9E}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{3593B929-A47B-47EC-B913-ACFAC7667C9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3593B929-A47B-47EC-B913-ACFAC7667C9E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3593B929-A47B-47EC-B913-ACFAC7667C9E}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

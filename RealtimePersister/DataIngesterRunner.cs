@@ -14,8 +14,8 @@ namespace RealtimePersister
         {
             SimulationReceiver simulationReceiver = new SimulationReceiver(_dataLayer);
 
-            int numThreads = 8;
-            int numSubmarketsPerMarket = 4;
+            int numThreads = 1;
+            int numSubmarketsPerMarket = 1;
             int numInstrumentsPerMarket = 1000;
             int numPortfolios = 1000;
             int maxPositionsPerPortfolio = 50;
@@ -25,8 +25,8 @@ namespace RealtimePersister
             _simulationLayer = new SimulationLayer(simulationReceiver);
 
             // Persister Factory
-            IStreamPersisterFactory persisterFactory = null; /* TODO */
-            IStreamPersister persister = null;
+            IStreamPersisterFactory persisterFactory = new SqlStreamPersisterFactory();
+            IStreamPersister persister = persisterFactory.CreatePersister(null);
 
             if (persisterFactory != null)
                 persister = persisterFactory.CreatePersister("DataIngester");
@@ -39,17 +39,18 @@ namespace RealtimePersister
             var marketTasks = new Task[numThreads];
             for (int marketNo = 0; marketNo < numThreads; marketNo++)
             {
-                marketTasks[marketNo] = Task.Run(async () =>
+                var marketNoCopy = marketNo;
+                marketTasks[marketNoCopy] = Task.Run(async () =>
                 {
-                    await _simulationLayer.LoadData(marketNo);
-                    bool addedData = await _simulationLayer.GenerateData(marketNo, numSubmarketsPerMarket, numInstrumentsPerMarket, 
-                        (marketNo == 0 ? numPortfolios : 0), (marketNo == 0 ? maxPositionsPerPortfolio : 0), (marketNo == 0 ? maxRulesPerPortfolio : 0));
+                    await _simulationLayer.LoadData(marketNoCopy);
+                    bool addedData = await _simulationLayer.GenerateData(marketNoCopy, numSubmarketsPerMarket, numInstrumentsPerMarket, 
+                        (marketNoCopy == 0 ? numPortfolios : 0), (marketNoCopy == 0 ? maxPositionsPerPortfolio : 0), (marketNoCopy == 0 ? maxRulesPerPortfolio : 0));
                     if (addedData)
                     {
-                        await _simulationLayer.SaveData(marketNo);
+                        await _simulationLayer.SaveData(marketNoCopy);
                     }
-                    await _simulationLayer.SimulatePrices(cancellationToken, marketNo, numPriceUpdatesPerSecond);
-                    await _simulationLayer.SaveData(marketNo);
+                    await _simulationLayer.SimulatePrices(cancellationToken, marketNoCopy, numPriceUpdatesPerSecond);
+                    await _simulationLayer.SaveData(marketNoCopy);
                 });
             }
             await Task.WhenAll(marketTasks);

@@ -1,0 +1,6 @@
+﻿CREATE PROCEDURE [dbo].[InsertSubmarketHelper](@Id INT, @MarketId INT, @Name NVARCHAR(50), @Timestamp DATETIME)
+WITH NATIVE_COMPILATION, SCHEMABINDING, EXECUTE AS OWNER 
+AS BEGIN ATOMIC WITH (TRANSACTION ISOLATION LEVEL = SNAPSHOT,LANGUAGE = N'English')
+	INSERT INTO dbo.Submarket(Id, MarketId, Name, Timestamp) VALUES (@Id, @MarketId, @Name, @Timestamp)
+	RETURN 0
+END
