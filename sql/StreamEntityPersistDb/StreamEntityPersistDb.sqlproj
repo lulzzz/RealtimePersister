@@ -73,6 +73,9 @@
     <Build Include="Tables\Position.sql" />
     <Build Include="Procs\InsertPositionHelper.sql" />
     <Build Include="Procs\InsertPosition.sql" />
+    <Build Include="Tables\Rule.sql" />
+    <Build Include="Procs\InsertRuleHelper.sql" />
+    <Build Include="Procs\InsertRule.sql" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="Tables\Submarket.sql" />

@@ -88,9 +88,28 @@ namespace RealtimePersister
                 if (item.Operation == StreamOperation.Insert) {
                     await InsertPosition(item as StreamPosition);
                 }
+            } else if (item.EntityType == StreamEntityType.Rule) {
+                if (item.Operation == StreamOperation.Insert) {
+                    await InsertRule(item as StreamRule);
+                }
             } else {
                 //Debugger.Break();
             }
+        }
+
+        private async Task InsertRule(StreamRule rule)
+        {
+            var InsertCmd = new SqlCommand();
+            await Insert(InsertCmd, () =>
+            {
+                var Id = int.Parse(rule.Id.Split('-')[1]);
+                var PortfolioId = int.Parse(rule.PortfolioId.Split(':')[1]);
+                InsertCmd.CommandText = "exec InsertRule @Id, @PortfolioId, @Expression, @Timestamp";
+                InsertCmd.Parameters.Add("@Id", SqlDbType.Int).Value = PortfolioId * 1000000+Id;
+                InsertCmd.Parameters.Add("@PortfolioId", SqlDbType.Int).Value = PortfolioId;
+                InsertCmd.Parameters.Add("@Expression", SqlDbType.NVarChar).Value = rule.Expression;
+                InsertCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = rule.Date;
+            });
         }
 
         private async Task InsertPosition(StreamPosition position)
