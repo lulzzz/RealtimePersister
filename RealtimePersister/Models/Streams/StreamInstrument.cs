@@ -1,10 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
+using Newtonsoft.Json;
+using ProtoBuf;
 using System.Runtime.Serialization;
-using System.Text;
 
 namespace RealtimePersister.Models.Streams
 {
+    [DataContract]
+    [ProtoContract]
     public class StreamInstrument : StreamEntityBase
     {
         public StreamInstrument() :
@@ -12,7 +14,13 @@ namespace RealtimePersister.Models.Streams
         {
         }
 
+        [JsonProperty(PropertyName = "submarketid")]
+        [DataMember]
+        [ProtoMember(7)]
         public string SubmarketId { get; set; }
+        [JsonProperty(PropertyName = "name")]
+        [DataMember]
+        [ProtoMember(8)]
         public string Name { get; set; }
         // Certainly needs at least instrument type here and much more (but not now)
 
@@ -24,11 +32,6 @@ namespace RealtimePersister.Models.Streams
         public int Compare(StreamInstrument other)
         {
             int ret = 0;
-#if false
-            ret = Id.CompareTo(other.Id);
-            if (ret != 0)
-                return ret;
-#endif
             ret = SubmarketId.CompareTo(other.SubmarketId);
             if (ret != 0)
                 return ret;

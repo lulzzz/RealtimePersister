@@ -25,7 +25,7 @@ namespace RealtimePersister
             _simulationLayer = new SimulationLayer(simulationReceiver);
 
             // Persister Factory
-            IStreamPersisterFactory persisterFactory = null; /* TODO */
+            IStreamPersisterFactory persisterFactory = new RealtimePersister.Redis.StreamPersisterFactory("localhost");
             IStreamPersister persister = null;
 
             if (persisterFactory != null)

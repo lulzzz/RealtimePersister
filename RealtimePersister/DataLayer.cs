@@ -24,69 +24,79 @@ namespace RealtimePersister
         {
             _persistenceLayer = persistenceLayer;
 
+            return;
             if (persistenceLayer != null)
             {
                 var markets = await persistenceLayer.GetAllMarkets();
                 if (markets != null)
                     foreach (var market in markets)
                     {
-                        _markets[market.Id] = market;
+                        if (market != null)
+                            _markets[market.Id] = market;
                     }
 
                 var submarkets = await persistenceLayer.GetAllSubmarkets();
                 if (submarkets != null)
                     foreach (var submarket in submarkets)
                     {
-                        _submarkets[submarket.Id] = submarket;
+                        if (submarket != null)
+                            _submarkets[submarket.Id] = submarket;
                     }
 
                 var instruments = await persistenceLayer.GetAllInstruments();
                 if (instruments != null)
                     foreach (var instrument in instruments)
                     {
-                        _instruments[instrument.Id] = instrument;
+                        if (instrument != null)
+                            _instruments[instrument.Id] = instrument;
                     }
 
                 var portfolios = await persistenceLayer.GetAllPortfolios();
                 if (portfolios != null)
                     foreach (var portfolio in portfolios)
                     {
-                        _portfolios[portfolio.Id] = portfolio;
+                        if (portfolio != null)
+                            _portfolios[portfolio.Id] = portfolio;
                     }
 
                 var positions = await persistenceLayer.GetAllPositions();
                 if (positions != null)
                     foreach (var position in positions)
                     {
-                        _positions[position.Id] = position;
+                        if (position != null)
+                            _positions[position.Id] = position;
                     }
 
                 var orders = await persistenceLayer.GetAllOrders();
                 if (orders != null)
                     foreach (var order in orders)
                     {
-                        _orders[order.Id] = order;
+                        if (order != null)
+                            _orders[order.Id] = order;
                     }
 
                 var rules = await persistenceLayer.GetAllRules();
                 if (rules != null)
                     foreach (var rule in rules)
                     {
-                        _rules[rule.Id] = rule;
+                        if (rule != null)
+                            _rules[rule.Id] = rule;
                     }
 
                 var prices = await persistenceLayer.GetAllPrices();
                 if (prices != null)
                     foreach (var price in prices)
                     {
-                        _prices[price.Id] = price;
+                        if (price != null)
+                            _prices[price.Id] = price;
                     }
 
                 var trades = await persistenceLayer.GetAllTrades();
                 if (trades != null)
                     foreach (var trade in trades)
                     {
-                        _trades[trade.Id] = trade;
+                        if (trade != null)
+                            _trades[trade.Id] = trade;
                     }
             }
         }
