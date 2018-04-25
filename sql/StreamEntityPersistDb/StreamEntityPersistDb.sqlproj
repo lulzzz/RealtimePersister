@@ -57,16 +57,29 @@
   <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
   <ItemGroup>
     <Folder Include="Properties" />
+    <Folder Include="Tables" />
+    <Folder Include="Procs" />
   </ItemGroup>
   <ItemGroup>
-    <Build Include="Market.sql" />
-    <Build Include="InsertMarket.sql" />
-    <Build Include="InsertMarketHelper.sql" />
-    <Build Include="Submarket.sql" />
-    <Build Include="InsertSubmarket.sql" />
-    <Build Include="InsertSubmarketHelper.sql" />
-    <Build Include="Instrument.sql" />
-    <Build Include="InsertInstrumentHelper.sql" />
-    <Build Include="InsertInstrument.sql" />
+    <Build Include="Tables\Instrument.sql" />
+    <Build Include="Tables\Market.sql" />
+    <Build Include="Procs\InsertSubmarketHelper.sql" />
+    <Build Include="Procs\InsertSubmarket.sql" />
+    <Build Include="Procs\InsertMarketHelper.sql" />
+    <Build Include="Procs\InsertMarket.sql" />
+    <Build Include="Tables\Portfolio.sql" />
+    <Build Include="Procs\InsertPortfolioHelper.sql" />
+    <Build Include="Procs\InsertPortfolio.sql" />
+    <Build Include="Tables\Position.sql" />
+    <Build Include="Procs\InsertPositionHelper.sql" />
+    <Build Include="Procs\InsertPosition.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="Tables\Submarket.sql" />
+    <Build Include="Procs\InsertInstrumentHelper.sql" />
+    <Build Include="Procs\InsertInstrument.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <RefactorLog Include="StreamEntityPersistDb.refactorlog" />
   </ItemGroup>
 </Project>

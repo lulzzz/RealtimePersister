@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -79,7 +80,50 @@ namespace RealtimePersister
                 if (item.Operation == StreamOperation.Insert) {
                     await InsertInstrument(item as StreamInstrument);
                 }
+            } else if (item.EntityType == StreamEntityType.Portfolio) {
+                if (item.Operation == StreamOperation.Insert) {
+                    await InsertPortfolio(item as StreamPortfolio);
+                }
+            } else if (item.EntityType == StreamEntityType.Position) {
+                if (item.Operation == StreamOperation.Insert) {
+                    await InsertPosition(item as StreamPosition);
+                }
+            } else {
+                //Debugger.Break();
             }
+        }
+
+        private async Task InsertPosition(StreamPosition position)
+        {
+            var InsertCmd = new SqlCommand();
+            await Insert(InsertCmd, () =>
+            {
+                var Id = int.Parse(position.Id.Split('-')[1]);
+                var InstrumentId = int.Parse(position.InstrumentId.Split('-')[2]);
+                var PortfolioId = int.Parse(position.PortfolioId.Split(':')[1]);
+                InsertCmd.CommandText = "exec InsertPosition @Id, @InstrumentId, @PortfolioId, @Volume, @Price, @Timestamp";
+                InsertCmd.Parameters.Add("@Id", SqlDbType.Int).Value = PortfolioId*1000000+Id;
+                InsertCmd.Parameters.Add("@InstrumentId", SqlDbType.Int).Value = InstrumentId;
+                InsertCmd.Parameters.Add("@PortfolioId", SqlDbType.Int).Value = PortfolioId;
+                InsertCmd.Parameters.Add("@Volume", SqlDbType.Int).Value = position.Volume;
+                InsertCmd.Parameters.Add("@Price", SqlDbType.Int).Value = position.Price;
+                InsertCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = position.Date;
+            });
+        }
+
+        private async Task InsertPortfolio(StreamPortfolio portfolio)
+        {
+            var InsertCmd = new SqlCommand();
+            await Insert(InsertCmd, () =>
+            {
+                var Id = int.Parse(portfolio.Id.Split(':')[1]);
+                InsertCmd.CommandText = "exec InsertPortfolio @Id, @Name, @Balance, @CheckRules, @Timestamp";
+                InsertCmd.Parameters.Add("@Id", SqlDbType.Int).Value = Id;
+                InsertCmd.Parameters.Add("@Name", SqlDbType.NVarChar).Value = portfolio.Name;
+                InsertCmd.Parameters.Add("@Balance", SqlDbType.Float).Value = portfolio.Balance;
+                InsertCmd.Parameters.Add("@CheckRules", SqlDbType.Bit).Value = portfolio.CheckRules;
+                InsertCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = portfolio.Date;
+            });
         }
 
         private async Task InsertInstrument(StreamInstrument instrument)
