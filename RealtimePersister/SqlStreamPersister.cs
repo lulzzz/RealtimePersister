@@ -99,15 +99,8 @@ namespace RealtimePersister
             }
         }
 
-        static ulong _sequencenumber = 0;
-
         private async Task UpsertPrice(StreamPrice price)
         {
-            if ((price.SequenceNumber < _sequencenumber) && (_sequencenumber != 0)) {
-                Debugger.Break();
-            }
-            _sequencenumber = price.SequenceNumber;
-
             var InsertCmd = new SqlCommand();
             await Insert(InsertCmd, () =>
             {
