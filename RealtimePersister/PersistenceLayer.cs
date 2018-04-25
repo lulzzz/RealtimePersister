@@ -9,7 +9,7 @@ namespace RealtimePersister
     public class PersistenceLayer
     {
         private IStreamPersister _persister;
-        private Dictionary<StreamEntityType, StreamEntityPersister> _streamEntityPersisters = new Dictionary<StreamEntityType, StreamEntityPersister>();
+        private StreamEntityPersister[] _streamEntityPersisters = new StreamEntityPersister[(int)StreamEntityType.Max];
 
         public async Task<bool> Initialize(IStreamPersister persister, CancellationToken cancellationToken)
         {
@@ -18,25 +18,26 @@ namespace RealtimePersister
             if (_persister != null)
                 ret = await _persister.Connect();
 
-            _streamEntityPersisters[StreamEntityType.Market] = new StreamEntityPersister(StreamEntityType.Market, persister, cancellationToken, 1, 50, 100);
-            _streamEntityPersisters[StreamEntityType.Submarket] = new StreamEntityPersister(StreamEntityType.Submarket, persister, cancellationToken, 1, 50, 100);
-            _streamEntityPersisters[StreamEntityType.Instrument] = new StreamEntityPersister(StreamEntityType.Instrument, persister, cancellationToken, 1, 50, 100);
-            _streamEntityPersisters[StreamEntityType.Portfolio] = new StreamEntityPersister(StreamEntityType.Portfolio, persister, cancellationToken, 1, 50, 100);
-            _streamEntityPersisters[StreamEntityType.Position] = new StreamEntityPersister(StreamEntityType.Position, persister, cancellationToken, 1, 50, 100);
-            _streamEntityPersisters[StreamEntityType.Order] = new StreamEntityPersister(StreamEntityType.Order, persister, cancellationToken, 1, 50, 100);
-            _streamEntityPersisters[StreamEntityType.Rule] = new StreamEntityPersister(StreamEntityType.Rule, persister, cancellationToken, 1, 50, 100);
-            _streamEntityPersisters[StreamEntityType.Price] = new StreamEntityPersister(StreamEntityType.Price, persister, cancellationToken, 20, 100, 1000);
-            _streamEntityPersisters[StreamEntityType.Trade] = new StreamEntityPersister(StreamEntityType.Trade, persister, cancellationToken, 1, 50, 100);
+            bool persistSynchronously = false;
+
+            _streamEntityPersisters[(int)StreamEntityType.Market] = new StreamEntityPersister(StreamEntityType.Market, persister, cancellationToken, 1, persistSynchronously, 50, 100);
+            _streamEntityPersisters[(int)StreamEntityType.Submarket] = new StreamEntityPersister(StreamEntityType.Submarket, persister, cancellationToken, 1, persistSynchronously, 50, 100);
+            _streamEntityPersisters[(int)StreamEntityType.Instrument] = new StreamEntityPersister(StreamEntityType.Instrument, persister, cancellationToken, 1, persistSynchronously, 50, 100);
+            _streamEntityPersisters[(int)StreamEntityType.Portfolio] = new StreamEntityPersister(StreamEntityType.Portfolio, persister, cancellationToken, 1, persistSynchronously, 50, 100);
+            _streamEntityPersisters[(int)StreamEntityType.Position] = new StreamEntityPersister(StreamEntityType.Position, persister, cancellationToken, 1, persistSynchronously, 50, 100);
+            _streamEntityPersisters[(int)StreamEntityType.Order] = new StreamEntityPersister(StreamEntityType.Order, persister, cancellationToken, 1, persistSynchronously, 50, 100);
+            _streamEntityPersisters[(int)StreamEntityType.Rule] = new StreamEntityPersister(StreamEntityType.Rule, persister, cancellationToken, 1, persistSynchronously, 50, 100);
+            _streamEntityPersisters[(int)StreamEntityType.Price] = new StreamEntityPersister(StreamEntityType.Price, persister, cancellationToken, 100, persistSynchronously, 50, 100);
+            _streamEntityPersisters[(int)StreamEntityType.Trade] = new StreamEntityPersister(StreamEntityType.Trade, persister, cancellationToken, 1, persistSynchronously, 50, 100);
 
             return ret;
         }
 
         public Task ProcessStreamItem(StreamEntityBase streamItem)
         {
-            if (_streamEntityPersisters.TryGetValue(streamItem.EntityType, out StreamEntityPersister entityPersister))
-                return entityPersister.ProcessStreamItem(streamItem);
-            else
-                return Task.CompletedTask;
+            return (_streamEntityPersisters[(int)streamItem.EntityType] != null ?
+                _streamEntityPersisters[(int)streamItem.EntityType].ProcessStreamItem(streamItem) :
+                Task.CompletedTask);
         }
 
         #region Get functions
@@ -192,6 +193,6 @@ namespace RealtimePersister
             return (_persister != null ? _persister.GetFromSequenceNumber<StreamTrade>(StreamEntityType.Trade,
                 sequenceNumberStart, sequenceNumberEnd) : Task.FromResult<IEnumerable<StreamTrade>>(null));
         }
-        #endregion
+#endregion
     }
 }

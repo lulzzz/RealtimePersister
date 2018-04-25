@@ -1,7 +1,12 @@
 ﻿using System;
+using Newtonsoft.Json;
+using ProtoBuf;
+using System.Runtime.Serialization;
 
 namespace RealtimePersister.Models.Streams
 {
+    [DataContract]
+    [ProtoContract]
     public class StreamTrade : StreamEntityBase
     {
         public StreamTrade() :
@@ -9,12 +14,33 @@ namespace RealtimePersister.Models.Streams
         {
         }
 
+        [JsonProperty(PropertyName = "portfolioid")]
+        [DataMember]
+        [ProtoMember(7)]
         public string PortfolioId { get; set; }
+        [JsonProperty(PropertyName = "instrumentid")]
+        [DataMember]
+        [ProtoMember(8)]
         public string InstrumentId { get; set; }
+        [JsonProperty(PropertyName = "bid")]
+        [DataMember]
+        [ProtoMember(9)]
         public bool Bid { get; set; }
+        [JsonProperty(PropertyName = "price")]
+        [DataMember]
+        [ProtoMember(10)]
         public double Price { get; set; }
+        [JsonProperty(PropertyName = "volume")]
+        [DataMember]
+        [ProtoMember(11)]
         public double Volume { get; set; }
+        [JsonProperty(PropertyName = "buyer")]
+        [DataMember]
+        [ProtoMember(12)]
         public string Buyer { get; set; }
+        [JsonProperty(PropertyName = "seller")]
+        [DataMember]
+        [ProtoMember(13)]
         public string Seller { get; set; }
 
         public override int GetPartitionKey(int partitionCount)
@@ -25,11 +51,9 @@ namespace RealtimePersister.Models.Streams
         public int Compare(StreamTrade other)
         {
             int ret = 0;
-#if false
             ret = Id.CompareTo(other.Id);
             if (ret != 0)
                 return ret;
-#endif
             ret = PortfolioId.CompareTo(other.PortfolioId);
             if (ret != 0)
                 return ret;

@@ -1,7 +1,12 @@
 ﻿using System;
+using Newtonsoft.Json;
+using ProtoBuf;
+using System.Runtime.Serialization;
 
 namespace RealtimePersister.Models.Streams
 {
+    [DataContract]
+    [ProtoContract]
     public class StreamPrice : StreamEntityBase
     {
         public StreamPrice() :
@@ -9,7 +14,13 @@ namespace RealtimePersister.Models.Streams
         {
         }
 
+        [JsonProperty(PropertyName = "pricelatest")]
+        [DataMember]
+        [ProtoMember(7)]
         public double PriceLatest { get; set; }
+        [JsonProperty(PropertyName = "pricedate")]
+        [DataMember]
+        [ProtoMember(8)]
         public DateTime PriceDate { get; set; }
         // these are not needed now
 #if false
@@ -33,11 +44,6 @@ namespace RealtimePersister.Models.Streams
         public int Compare(StreamPrice other)
         {
             int ret = 0;
-#if false
-            ret = Id.CompareTo(other.Id);
-            if (ret != 0)
-                return ret;
-#endif
             ret = (PriceLatest != other.PriceLatest ? PriceLatest > other.PriceLatest ? 1 : -1 : 0);
             if (ret != 0)
                 return ret;

@@ -16,6 +16,8 @@ namespace RealtimePersister.Models.Streams
         Market,
         Submarket,
         Instrument,
-        Price
+        Price,
+
+        Max // just so we now how many we have
     }
 }
