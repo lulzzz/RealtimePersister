@@ -76,6 +76,9 @@
     <Build Include="Tables\Rule.sql" />
     <Build Include="Procs\InsertRuleHelper.sql" />
     <Build Include="Procs\InsertRule.sql" />
+    <Build Include="Tables\Price.sql" />
+    <Build Include="Procs\UpsertPriceHelper.sql" />
+    <Build Include="Procs\UpsertPrice.sql" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="Tables\Submarket.sql" />

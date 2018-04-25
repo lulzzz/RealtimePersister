@@ -92,9 +92,30 @@ namespace RealtimePersister
                 if (item.Operation == StreamOperation.Insert) {
                     await InsertRule(item as StreamRule);
                 }
+            } else if (item.EntityType == StreamEntityType.Price) {
+                await UpsertPrice(item as StreamPrice);
             } else {
-                //Debugger.Break();
+                Debugger.Break();
             }
+        }
+
+        private async Task UpsertPrice(StreamPrice price)
+        {
+            var InsertCmd = new SqlCommand();
+            await Insert(InsertCmd, () =>
+            {
+                var IntrumentTmp = price.Id.Split(':')[1];
+                var InstrumentIdSplit = IntrumentTmp.Split('-');
+                var MarketId = int.Parse(InstrumentIdSplit[0]);
+                var SubmarketId = int.Parse(InstrumentIdSplit[1]);
+                var Id = int.Parse(InstrumentIdSplit[2]);
+
+                InsertCmd.CommandText = "exec UpsertRule @InstrumentId, @Price, @PriceLatest, @Timestamp";
+                InsertCmd.Parameters.Add("@InstrumentId", SqlDbType.Int).Value = (MarketId * 10 + SubmarketId) * 1000000 + Id;
+                InsertCmd.Parameters.Add("@Price", SqlDbType.Int).Value = price.PriceLatest;
+                InsertCmd.Parameters.Add("@Pricelatest", SqlDbType.DateTime).Value = price.Date;
+                InsertCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = price.Date;
+            });
         }
 
         private async Task InsertRule(StreamRule rule)
@@ -150,11 +171,14 @@ namespace RealtimePersister
             var InsertCmd = new SqlCommand();
             await Insert(InsertCmd, () =>
             {
-                var Id = int.Parse(instrument.Id.Split('-')[2]);
-                var SubmarketId = int.Parse(instrument.SubmarketId.Split('-')[1]);
-                InsertCmd.CommandText = "exec InsertInstrument @Id, @MarketId, @Name, @Timestamp";
-                InsertCmd.Parameters.Add("@Id", SqlDbType.Int).Value = Id;
-                InsertCmd.Parameters.Add("@MarketId", SqlDbType.Int).Value = SubmarketId;
+                var InstrumentIdTmp = instrument.Id.Split(':')[1];
+                var InstrumentIdSplit = InstrumentIdTmp.Split('-');
+                var MarketId = int.Parse(InstrumentIdSplit[0]);
+                var SubmarketId = int.Parse(InstrumentIdSplit[1]);
+                var Id = int.Parse(InstrumentIdSplit[2]);
+                InsertCmd.CommandText = "exec InsertInstrument @Id, @SubmarketId, @Name, @Timestamp";
+                InsertCmd.Parameters.Add("@Id", SqlDbType.Int).Value = (MarketId*10+SubmarketId)*1000000+Id;
+                InsertCmd.Parameters.Add("@SubmarketId", SqlDbType.Int).Value = SubmarketId;
                 InsertCmd.Parameters.Add("@Name", SqlDbType.NVarChar).Value = instrument.Name;
                 InsertCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = instrument.Date;
             });
