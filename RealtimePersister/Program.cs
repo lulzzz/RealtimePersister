@@ -12,33 +12,57 @@ namespace RealtimePersister
         static void Main(string[] args)
         {
 
-            var tasks =new List<Task>();
-            int numThreads = 8;
-            int numSubmarketsPerMarket = 4;
-            int numInstrumentsPerMarket = 1000;
-            int numPortFolios = 1000;
-            int maxPositionsPerPortfolio = 50;
-            int maxRulesPerPortfolio = 20;
-            int numPriceUpdatesPerSecond = 0;
+            var _tasks =new List<Task>();
+            int _numThreads = 8;
+            int _numSubmarketsPerMarket = 4;
+            int _numInstrumentsPerMarket = 1000;
+            int _numPortFolios = 1000;
+            int _maxPositionsPerPortfolio = 50;
+            int _maxRulesPerPortfolio = 20;
+            int _numPriceUpdatesPerSecond = 0;
+            bool _isCosmosDBPersistenceOn = false;
+            bool _isRedisPersistenceOn = true;
+            bool _isSqlPersistenceOn = false;
+            IStreamPersisterFactory _persisterFactoryCosmos = null;
+            IStreamPersisterFactory _persisterFactoryRedis = null;
+            IStreamPersisterFactory _persisterFactorySQL = null;
 
-            //int typeOfPersister = 0; //0=Cosmos DB, 1 =Redis, 2= SQL
-            _dataIngesterRunnerCosmos = new DataIngesterRunner(numThreads, numSubmarketsPerMarket, numInstrumentsPerMarket, numPortFolios, maxPositionsPerPortfolio, maxRulesPerPortfolio, numPriceUpdatesPerSecond,null);
             CancellationTokenSource tokenSource = new CancellationTokenSource();
-            //var mainLoop1 = _dataIngesterRunnerCosmos.RunSimulationAsync(tokenSource.Token);
-            tasks.Add(_dataIngesterRunnerCosmos.RunSimulationAsync(tokenSource.Token));
 
-            _dataIngesterRunnerRedis = new DataIngesterRunner(numThreads, numSubmarketsPerMarket, numInstrumentsPerMarket, numPortFolios, maxPositionsPerPortfolio, maxRulesPerPortfolio, numPriceUpdatesPerSecond,new RedisStreamPersisterFactory());
-            //var mainLoop2 =_dataIngesterRunnerRedis.RunSimulationAsync(tokenSource.Token);
-            tasks.Add(_dataIngesterRunnerRedis.RunSimulationAsync(tokenSource.Token));
+            if (_isCosmosDBPersistenceOn) {
+                //TODO
+                _persisterFactoryCosmos = null;
+                _dataIngesterRunnerCosmos = new DataIngesterRunner(_numThreads, _numSubmarketsPerMarket, _numInstrumentsPerMarket, _numPortFolios, _maxPositionsPerPortfolio, _maxRulesPerPortfolio, _numPriceUpdatesPerSecond, _persisterFactoryCosmos);
+                _tasks.Add(_dataIngesterRunnerCosmos.RunSimulationAsync(tokenSource.Token));
 
-            _dataIngesterRunnerSQL = new DataIngesterRunner(numThreads, numSubmarketsPerMarket, numInstrumentsPerMarket, numPortFolios, maxPositionsPerPortfolio, maxRulesPerPortfolio, numPriceUpdatesPerSecond, null);
-            tasks.Add(_dataIngesterRunnerSQL.RunSimulationAsync(tokenSource.Token));
+            }
+
+            if (_isRedisPersistenceOn)
+            {
+                _persisterFactoryRedis = new RealtimePersister.Redis.StreamPersisterFactory("pb-syncweek-redis.redis.cache.windows.net:6380,password=IG1aBMjxzo0uE106LJT+Ceigc1AZldzwd9HYDDKIdBc=,ssl=True,abortConnect=False");
+                _dataIngesterRunnerRedis = new DataIngesterRunner(_numThreads, _numSubmarketsPerMarket, _numInstrumentsPerMarket, _numPortFolios, _maxPositionsPerPortfolio, _maxRulesPerPortfolio, _numPriceUpdatesPerSecond, _persisterFactoryRedis);
+                _tasks.Add(_dataIngesterRunnerRedis.RunSimulationAsync(tokenSource.Token));
+            }
+
+            if (_isSqlPersistenceOn)
+            {
+                _persisterFactorySQL = null;
+                _dataIngesterRunnerSQL = new DataIngesterRunner(_numThreads, _numSubmarketsPerMarket, _numInstrumentsPerMarket, _numPortFolios, _maxPositionsPerPortfolio, _maxRulesPerPortfolio, _numPriceUpdatesPerSecond, _persisterFactorySQL);
+                _tasks.Add(_dataIngesterRunnerSQL.RunSimulationAsync(tokenSource.Token));
+            }
+            //IStreamPersisterFactory persisterFactory = new RealtimePersister.Redis.StreamPersisterFactory("pb-syncweek-redis.redis.cache.windows.net:6380,password=IG1aBMjxzo0uE106LJT+Ceigc1AZldzwd9HYDDKIdBc=,ssl=True,abortConnect=False");
+            //IStreamPersisterFactory persisterFactory = new RealtimePersister.Redis.StreamPersisterFactory("localhost");
+
+              
 
             System.Console.WriteLine("Press Enter to stop running");
             System.Console.ReadLine();
 
             tokenSource.Cancel();
-            Task.WhenAll(tasks).Wait();
+            System.Console.WriteLine("Task size" + _tasks.Count);
+            Task.WhenAll(_tasks).Wait();
+            
+           
         }
     }
 }
