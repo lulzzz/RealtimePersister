@@ -18,7 +18,7 @@ namespace RealtimePersister
             if (_persister != null)
                 ret = await _persister.Connect();
 
-            bool persistSynchronously = false;
+            bool persistSynchronously = true;
 
             //_streamEntityPersisters[(int)StreamEntityType.Market] = new StreamEntityPersister(StreamEntityType.Market, persister, cancellationToken, 1, persistSynchronously, 50, 100);
             //_streamEntityPersisters[(int)StreamEntityType.Submarket] = new StreamEntityPersister(StreamEntityType.Submarket, persister, cancellationToken, 1, persistSynchronously, 50, 100);

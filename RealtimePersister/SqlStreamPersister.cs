@@ -45,6 +45,7 @@ namespace RealtimePersister
             // (
             //	 InstrumentId INT, Price FLOAT, PriceDate DATETIME, Timestamp DATETIME, SequenceNumber bigint
             // )
+            currentBatch.Columns.Add("Id", typeof(int));
             currentBatch.Columns.Add("InstrumentId", typeof(int));
             currentBatch.Columns.Add("Price", typeof(double));
             currentBatch.Columns.Add("PriceDate", typeof(DateTime));
@@ -105,7 +106,7 @@ namespace RealtimePersister
                     await InsertRule(item as StreamRule);
                 }
             } else if (item.EntityType == StreamEntityType.Price) {
-                if (tx != null) {
+                if (tx == null) {
                     await UpsertPrice(item as StreamPrice);
                 } else {
                     UpsertPriceBatch(item as StreamPrice);
@@ -123,7 +124,7 @@ namespace RealtimePersister
             var SubmarketId = int.Parse(InstrumentIdSplit[1]);
             var Id = int.Parse(InstrumentIdSplit[2]);
 
-            currentBatch.Rows.Add((MarketId * 10 + SubmarketId) * 1000000 + Id, price.PriceLatest, price.PriceDate, price.Date, price.SequenceNumber);
+            currentBatch.Rows.Add(currentBatch.Rows.Count+1, (MarketId * 10 + SubmarketId) * 1000000 + Id, price.PriceLatest, price.PriceDate, price.Date, price.SequenceNumber);
         }
 
         public async Task Commit()
@@ -131,8 +132,10 @@ namespace RealtimePersister
             var CallSPCmd = new SqlCommand();
             await DoSqlCmd(CallSPCmd, () =>
             {
-                CallSPCmd.CommandText = "exec UpsertPriceBatch @PriceTable";
+                CallSPCmd.CommandText = "exec UpsertPriceBatch @PriceTable, @NumRows";
                 CallSPCmd.Parameters.Add("@PriceTable", SqlDbType.Structured).Value = currentBatch;
+                CallSPCmd.Parameters[0].TypeName = "[dbo].[PriceTableType]";
+                CallSPCmd.Parameters.Add("@NumRows", SqlDbType.Int).Value = currentBatch.Rows.Count;
             });
         }
 
