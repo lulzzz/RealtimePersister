@@ -4,6 +4,7 @@ using Microsoft.Azure.Documents.Linq;
 using RealtimePersister.Models.Streams;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -25,7 +26,7 @@ namespace RealtimePersister.CosmosDb
             EnableScanInQuery = true
         };
 
-        public bool SupportsBatches => false;
+        public bool SupportsBatches => true;
 
         public CosmosDbStreamPersister(string uri, string key, string database, string collection, int offerThroughput)
         {
@@ -65,7 +66,7 @@ namespace RealtimePersister.CosmosDb
 
         public Task<IStreamPersisterBatch> CreateBatch(StreamEntityType type)
         {
-            throw new NotImplementedException();
+            
         }
 
         public async Task Upsert(StreamEntityBase item, IStreamPersisterBatch batch = null)
@@ -149,13 +150,12 @@ namespace RealtimePersister.CosmosDb
         {
             var collectionInfo = new DocumentCollection
             {
-                Id = _collection,
-                IndexingPolicy = new IndexingPolicy { IndexingMode = IndexingMode.None, Automatic = false }
+                Id = _collection
             };
 
             collectionInfo.PartitionKey.Paths.Add($"/id");
 
-            await _client.CreateDocumentCollectionAsync(
+            var response = await _client.CreateDocumentCollectionAsync(
                 UriFactory.CreateDatabaseUri(_database),
                 collectionInfo,
                 new RequestOptions
@@ -163,6 +163,21 @@ namespace RealtimePersister.CosmosDb
                     OfferThroughput = _offerThroughput,
                     ConsistencyLevel = ConsistencyLevel.Eventual
                 });
+
+            await CreateBulkImportSprocAsync(response.Resource.AltLink);
+        }
+
+        private async Task CreateBulkImportSprocAsync(string collectionLink)
+        {
+            var scriptFileName = @"CosmosDb\bulkImport.js";
+
+            var sproc = new StoredProcedure
+            {
+                Id = "bulkImport",
+                Body = File.ReadAllText(scriptFileName)
+            };
+
+            await _client.CreateStoredProcedureAsync(collectionLink, sproc);
         }
     }
 }
