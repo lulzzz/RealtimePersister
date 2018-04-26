@@ -327,16 +327,10 @@ namespace RealtimePersister.Models.Simulation
                         {
                             var submarketInfo = submarkets[submarketNo];
                             var instrument = GetRandomInstrument(rand, submarketInfo.MarketNo, submarketInfo.SubmarketNo, submarketInfo.Submarket);
-                            instrument.Id = Guid.NewGuid().ToString();//instrument.Id.Replace("Instrument:", "Price:");
                             instrument.PriceLatest += (rand.Next(10) > 4 ? 0.05 : -0.05);
                             instrument.PriceDate = DateTime.UtcNow;
-#if true
                             if (_simulationReceiver != null)
                                 await _simulationReceiver.PriceUpdated(instrument.ToPriceStream(StreamOperation.Update));
-#else
-                            if (persister != null)
-                                await persister.Upsert(instrument.ToPriceStream(StreamOperation.Update), null);
-#endif
                             ReportSend();
                             submarketNo++;
                             if (submarketNo >= numSubmarkets)
