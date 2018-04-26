@@ -4,6 +4,7 @@ using Microsoft.Azure.Documents.Linq;
 using RealtimePersister.Models.Streams;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,14 +20,15 @@ namespace RealtimePersister.CosmosDb
         private int _offerThroughput;
         private DocumentClient _client;
 
+        private const string BulkImportSprocName = "bulkImport";
+
         private static readonly FeedOptions FeedOptions = new FeedOptions
         {
             MaxItemCount = -1,
-            EnableCrossPartitionQuery = true/*,
-            EnableScanInQuery = true*/
+            EnableCrossPartitionQuery = true
         };
 
-        public bool SupportsBatches => false;
+        public bool SupportsBatches => true;
 
         public CosmosDbStreamPersister(string uri, string key, string database, string collection, int offerThroughput)
         {
@@ -66,40 +68,31 @@ namespace RealtimePersister.CosmosDb
 
         public Task<IStreamPersisterBatch> CreateBatch(StreamEntityType type)
         {
-            return Task.FromResult<IStreamPersisterBatch>(new CosmosDBStreamPersisterBatch());
+            var sprocUri = UriFactory.CreateStoredProcedureUri(_database, _collection, BulkImportSprocName);
+            return Task.FromResult<IStreamPersisterBatch>(new CosmosDBStreamPersisterBatch(_client, sprocUri));
         }
 
         private int _numUpserts;
         private double _timeSpentUpsert;
         private DateTime _lastReported = DateTime.UtcNow;
 
-        private Dictionary<string, object> _cachedData = null;
-
         public async Task Upsert(StreamEntityBase item, IStreamPersisterBatch batch = null)
         {
             var sw = new Stopwatch();
             sw.Start();
             var collectionUri = UriFactory.CreateDocumentCollectionUri(_database, _collection);
+            var itemDictionary = item.ToKeyValueDictionary();
 
-#if true
-            var task = _client.UpsertDocumentAsync(collectionUri, item.ToKeyValueDictionary(),
-                    new RequestOptions { PartitionKey = new PartitionKey(item.Id) });
-#else
-            if (_cachedData == null)
-                _cachedData = item.ToKeyValueDictionary();
-            else
-                item.ToKeyValueDictionary();
-            
-            _cachedData["id"] = Guid.NewGuid().ToString();
-            var task = _client.CreateDocumentAsync(collectionUri, _cachedData, new RequestOptions() { });
-#endif
             if (batch != null)
             {
                 var cosmosDbBatch = batch as CosmosDBStreamPersisterBatch;
-                cosmosDbBatch.AddTask(task);
+                cosmosDbBatch.AddItem(itemDictionary);
             }
             else
-                await task;
+            {
+                await _client.UpsertDocumentAsync(collectionUri, itemDictionary,
+                      new RequestOptions { PartitionKey = new PartitionKey(item.PartitionKey) });
+            }
             sw.Stop();
 
             lock (this)
@@ -191,20 +184,33 @@ namespace RealtimePersister.CosmosDb
         {
             var collectionInfo = new DocumentCollection
             {
-                Id = _collection,
-                //IndexingPolicy = new IndexingPolicy { IndexingMode = IndexingMode.None, Automatic = false }
+                Id = _collection
             };
 
-            collectionInfo.PartitionKey.Paths.Add($"/id");
+            collectionInfo.PartitionKey.Paths.Add($"/{nameof(StreamEntityBase.PartitionKey)}");
 
-            await _client.CreateDocumentCollectionAsync(
+            var response = await _client.CreateDocumentCollectionAsync(
                 UriFactory.CreateDatabaseUri(_database),
                 collectionInfo,
                 new RequestOptions
                 {
-                    OfferThroughput = _offerThroughput/*,
-                    ConsistencyLevel = ConsistencyLevel.Eventual*/
+                    OfferThroughput = _offerThroughput
                 });
+
+            await CreateBulkImportSprocAsync(response.Resource.AltLink);
+        }
+
+        private async Task CreateBulkImportSprocAsync(string collectionLink)
+        {
+            var scriptFileName = @"CosmosDb\bulkImport.js";
+
+            var sproc = new StoredProcedure
+            {
+                Id = BulkImportSprocName,
+                Body = File.ReadAllText(scriptFileName)
+            };
+
+            await _client.CreateStoredProcedureAsync(collectionLink, sproc);
         }
     }
 }

@@ -55,8 +55,8 @@ namespace RealtimePersister.Models.Streams
         public override Dictionary<string, object> ToKeyValueDictionary()
         {
             var dict = base.ToKeyValueDictionary();
-            dict["pricelatest"] = PriceLatest;
-            dict["pricedate"] = PriceDate;
+            dict[nameof(PriceLatest)] = PriceLatest;
+            dict[nameof(PriceDate)] = PriceDate;
             return dict;
         }
     }

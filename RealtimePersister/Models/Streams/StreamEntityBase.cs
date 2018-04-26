@@ -73,6 +73,8 @@ namespace RealtimePersister.Models.Streams
         [ProtoMember(6)]
         public DateTime Date { get; set; } = DateTime.UtcNow;
 
+        public int PartitionKey { get; set; }
+
         public string ToJsonString()
         {
             return JsonConvert.SerializeObject(this, this.GetType(), _settings);
@@ -154,13 +156,16 @@ namespace RealtimePersister.Models.Streams
 
         public virtual Dictionary<string, object> ToKeyValueDictionary()
         {
-            var dict = new Dictionary<string, object>();
-            dict["streamname"] = StreamName;
-            dict["sequencenumber"] = SequenceNumber;
-            dict["entitytype"] = EntityType;
-            dict["operation"] = Operation;
-            dict["id"] = Id;
-            dict["date"] = Date;
+            var dict = new Dictionary<string, object>
+            {
+                [nameof(StreamName)] = StreamName,
+                [nameof(SequenceNumber)] = SequenceNumber,
+                [nameof(EntityType)] = EntityType,
+                [nameof(Operation)] = Operation,
+                [nameof(Id)] = Id,
+                [nameof(Date)] = Date,
+                [nameof(PartitionKey)] = PartitionKey
+            };
             return dict;
         }
 }

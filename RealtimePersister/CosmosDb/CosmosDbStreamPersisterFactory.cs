@@ -12,7 +12,7 @@ namespace RealtimePersister.CosmosDb
             {
                 var uri = ConfigurationManager.AppSettings["EndpointUrl"];
                 var key = ConfigurationManager.AppSettings["PrimaryKey"];
-                _persister = new CosmosDbStreamPersister(uri, key, database, "syncweek", 100_000);
+                _persister = new CosmosDbStreamPersister(uri, key, database, "syncweek", 1000_000);
             }
 
             return _persister;
