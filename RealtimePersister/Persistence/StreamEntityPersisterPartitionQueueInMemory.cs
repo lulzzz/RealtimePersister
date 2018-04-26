@@ -45,20 +45,21 @@ namespace RealtimePersister
                 }
 
                 var pendingItems = PendingItems;
-                if (!pendingItems.TryGetValue(item.Id, out StreamEntityPersisterItem persiterItem))
-                {
-                    pendingItems.Add(item.Id, new StreamEntityPersisterItem()
-                    {
-                        UpsertItem = (item.Operation == StreamOperation.Insert ||
-                                        item.Operation == StreamOperation.Update ? item : null),
-                        DeleteItem = (item.Operation == StreamOperation.Delete ? item : null)
-                    });
+                lock (pendingItems) {
+                    if (!pendingItems.TryGetValue(item.Id, out StreamEntityPersisterItem persiterItem)) {
+                        pendingItems.Add(item.Id, new StreamEntityPersisterItem()
+                        {
+                            UpsertItem = (item.Operation == StreamOperation.Insert ||
+                                            item.Operation == StreamOperation.Update ? item : null),
+                            DeleteItem = (item.Operation == StreamOperation.Delete ? item : null)
+                        });
+                    }
+                    else if (item.Operation == StreamOperation.Insert ||
+                                            item.Operation == StreamOperation.Update)
+                        persiterItem.UpsertItem = item;
+                    else if (item.Operation == StreamOperation.Delete)
+                        persiterItem.DeleteItem = item;
                 }
-                else if (item.Operation == StreamOperation.Insert ||
-                                        item.Operation == StreamOperation.Update)
-                    persiterItem.UpsertItem = item;
-                else if (item.Operation == StreamOperation.Delete)
-                    persiterItem.DeleteItem = item;
 
                 if (item.Operation == StreamOperation.Insert || item.Operation == StreamOperation.Update)
                     Interlocked.Increment(ref _numUpserts);

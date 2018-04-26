@@ -14,7 +14,7 @@ namespace RealtimePersister
         {
             SimulationReceiver simulationReceiver = new SimulationReceiver(_dataLayer);
 
-            int numThreads = 1;
+            int numThreads = 8;
             int numSubmarketsPerMarket = 1;
             int numInstrumentsPerMarket = 1000;
             int numPortfolios = 1000;

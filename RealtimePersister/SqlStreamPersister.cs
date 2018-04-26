@@ -14,21 +14,56 @@ namespace RealtimePersister
     {
         public IStreamPersister CreatePersister(string database)
         {
-            return new SqlStreamPersister(database);
+            return new SqlStreamPersister();
         }
     }
 
-    public class SqlStreamPersister : IStreamPersister, IStreamPersisterBatch
+    public class SqlBatchStreamPersister : IStreamPersisterBatch
     {
-        string connectionString = "Server=andersth-sql-wus2.database.windows.net;Database=StreamEntityPersist;Integrated Security=False;User Id=andersth;Password=P@ssword.666";
-        //string connectionString = "Server=10.0.30.179;Database=StreamEntityPersist;Integrated Security=True";
-        string database;
+        SqlStreamPersister _streamPersister;
+        DataTable _currentBatch;
 
-        DataTable currentBatch;
-
-        public SqlStreamPersister(string database)
+        public SqlBatchStreamPersister(SqlStreamPersister streamPersister)
         {
-            this.database = database;
+            _streamPersister = streamPersister;
+            _currentBatch = new DataTable();
+            // CREATE TYPE [dbo].[PriceTableType] AS TABLE
+            // (
+            //	 InstrumentId INT, Price FLOAT, PriceDate DATETIME, Timestamp DATETIME, SequenceNumber bigint
+            // )
+            _currentBatch.Columns.Add("Id", typeof(int));
+            _currentBatch.Columns.Add("InstrumentId", typeof(int));
+            _currentBatch.Columns.Add("Price", typeof(double));
+            _currentBatch.Columns.Add("PriceDate", typeof(DateTime));
+            _currentBatch.Columns.Add("Timestamp", typeof(DateTime));
+            _currentBatch.Columns.Add("SequenceNumber", typeof(long));
+        }
+
+        public async Task Commit()
+        {
+            var CallSPCmd = new SqlCommand();
+            await _streamPersister.DoSqlCmd(CallSPCmd, () =>
+            {
+                CallSPCmd.CommandText = "exec UpsertPriceBatch @PriceTable, @NumRows";
+                CallSPCmd.Parameters.Add("@PriceTable", SqlDbType.Structured).Value = _currentBatch;
+                CallSPCmd.Parameters[0].TypeName = "[dbo].[PriceTableType]";
+                CallSPCmd.Parameters.Add("@NumRows", SqlDbType.Int).Value = _currentBatch.Rows.Count;
+            });
+        }
+
+        public void AddRow(int InstrumentId, double PriceLatest, DateTime PriceDate, DateTime Date, ulong SequenceNumber)
+        {
+            _currentBatch.Rows.Add(_currentBatch.Rows.Count + 1, InstrumentId, PriceLatest, PriceDate, Date, SequenceNumber);
+        }
+    }
+
+    public class SqlStreamPersister : IStreamPersister
+    {
+        string _connectionString = "Server=andersth-sql-wus2.database.windows.net;Database=StreamEntityPersist;Integrated Security=False;User Id=andersth;Password=P@ssword.666";
+        //string _connectionString = "Server=10.0.30.179;Database=StreamEntityPersist;Integrated Security=True";
+
+        public SqlStreamPersister()
+        {
         }
 
         public bool SupportsBatches => true;
@@ -40,18 +75,7 @@ namespace RealtimePersister
 
         public async Task<IStreamPersisterBatch> CreateBatch(StreamEntityType type)
         {
-            currentBatch = new DataTable();
-            // CREATE TYPE [dbo].[PriceTableType] AS TABLE
-            // (
-            //	 InstrumentId INT, Price FLOAT, PriceDate DATETIME, Timestamp DATETIME, SequenceNumber bigint
-            // )
-            currentBatch.Columns.Add("Id", typeof(int));
-            currentBatch.Columns.Add("InstrumentId", typeof(int));
-            currentBatch.Columns.Add("Price", typeof(double));
-            currentBatch.Columns.Add("PriceDate", typeof(DateTime));
-            currentBatch.Columns.Add("Timestamp", typeof(DateTime));
-            currentBatch.Columns.Add("SequenceNumber", typeof(long));
-            return this;
+            return new SqlBatchStreamPersister(this);
         }
 
         public Task Delete(StreamEntityBase item, IStreamPersisterBatch tx = null)
@@ -109,34 +133,24 @@ namespace RealtimePersister
                 if (tx == null) {
                     await UpsertPrice(item as StreamPrice);
                 } else {
-                    UpsertPriceBatch(item as StreamPrice);
+                    UpsertPriceBatch(item as StreamPrice, tx);
                 }
             } else {
                 Debugger.Break();
             }
         }
 
-        private void UpsertPriceBatch(StreamPrice price)
+        private void UpsertPriceBatch(StreamPrice price, IStreamPersisterBatch tx = null)
         {
+            var batchPersister = tx as SqlBatchStreamPersister;
+
             var IntrumentTmp = price.Id.Split(':')[1];
             var InstrumentIdSplit = IntrumentTmp.Split('-');
             var MarketId = int.Parse(InstrumentIdSplit[0]);
             var SubmarketId = int.Parse(InstrumentIdSplit[1]);
             var Id = int.Parse(InstrumentIdSplit[2]);
 
-            currentBatch.Rows.Add(currentBatch.Rows.Count+1, (MarketId * 10 + SubmarketId) * 1000000 + Id, price.PriceLatest, price.PriceDate, price.Date, price.SequenceNumber);
-        }
-
-        public async Task Commit()
-        {
-            var CallSPCmd = new SqlCommand();
-            await DoSqlCmd(CallSPCmd, () =>
-            {
-                CallSPCmd.CommandText = "exec UpsertPriceBatch @PriceTable, @NumRows";
-                CallSPCmd.Parameters.Add("@PriceTable", SqlDbType.Structured).Value = currentBatch;
-                CallSPCmd.Parameters[0].TypeName = "[dbo].[PriceTableType]";
-                CallSPCmd.Parameters.Add("@NumRows", SqlDbType.Int).Value = currentBatch.Rows.Count;
-            });
+            batchPersister.AddRow((MarketId * 10 + SubmarketId) * 1000000 + Id, price.PriceLatest, price.PriceDate, price.Date, price.SequenceNumber);
         }
 
         private async Task UpsertPrice(StreamPrice price)
@@ -253,9 +267,9 @@ namespace RealtimePersister
             });
         }
 
-        private async Task DoSqlCmd(SqlCommand SqlCmd, Action setupParameters)
+        public async Task DoSqlCmd(SqlCommand SqlCmd, Action setupParameters)
         {
-            using (var conn = new SqlConnection(connectionString)) {
+            using (var conn = new SqlConnection(_connectionString)) {
                 await conn.OpenAsync();
                 SqlCmd.Connection = conn;
                 setupParameters();
