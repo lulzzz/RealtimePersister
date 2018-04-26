@@ -27,6 +27,7 @@ namespace RealtimePersister
 
             // Persister Factory
             IStreamPersisterFactory persisterFactory = new CosmosDbStreamPersisterFactory();
+            //IStreamPersisterFactory persisterFactory = new RealtimePersister.Redis.StreamPersisterFactory("localhost");
             IStreamPersister persister = null;
 
             if (persisterFactory != null)
@@ -57,7 +58,7 @@ namespace RealtimePersister
                 var marketNoCopy = marketNo;
                 marketTasks[marketNoCopy] = Task.Run(async () =>
                 {
-                    await _simulationLayer.SimulatePrices(cancellationToken, marketNoCopy, numPriceUpdatesPerSecond);
+                    await _simulationLayer.SimulatePrices(cancellationToken, marketNoCopy, numPriceUpdatesPerSecond, persister);
                     await _simulationLayer.SaveData(marketNoCopy);
                 });
             }

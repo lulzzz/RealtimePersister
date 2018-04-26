@@ -23,18 +23,7 @@
     // 2) The callback was called docs.length times.
     //    In this case all documents were created and we don’t need to call tryCreate anymore. Just call setBody and we are done.
     function tryCreate(doc, callback) {
-        // If you are sure that every document will contain its own (unique) id field then
-        // disable the option to auto generate ids.
-        // by leaving this on, the entire document is parsed to check if there is an id field or not
-        // by disabling this, parsing of the document is skipped because you're telling DocumentDB 
-        // that you are providing your own ids.
-        // depending on the size of your documents making this change can have a significant 
-        // improvement on document creation. 
-        var options = {
-            disableAutomaticIdGeneration: true
-        };
-
-        var isAccepted = collection.createDocument(collectionLink, doc, options, callback);
+        var isAccepted = collection.createDocument(collectionLink, doc, callback);
 
         // If the request was accepted, callback will be called.
         // Otherwise report current count back to the client, 

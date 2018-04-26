@@ -1,10 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Newtonsoft.Json;
+using ProtoBuf;
 using System.Runtime.Serialization;
-using System.Text;
 
 namespace RealtimePersister.Models.Streams
 {
+    [DataContract]
+    [ProtoContract]
     public class StreamMarket : StreamEntityBase
     {
         public StreamMarket() :
@@ -12,16 +13,14 @@ namespace RealtimePersister.Models.Streams
         {
         }
 
+        [JsonProperty(PropertyName = "name")]
+        [DataMember]
+        [ProtoMember(7)]
         public string Name { get; set; }
 
         public int Compare(StreamMarket other)
         {
             int ret = 0;
-#if false
-            ret = Id.CompareTo(other.Id);
-            if (ret != 0)
-                return ret;
-#endif
             ret = Name.CompareTo(other.Name);
             return ret;
         }

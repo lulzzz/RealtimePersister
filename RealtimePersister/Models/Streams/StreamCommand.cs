@@ -1,6 +1,11 @@
-﻿
+﻿using Newtonsoft.Json;
+using ProtoBuf;
+using System.Runtime.Serialization;
+
 namespace RealtimePersister.Models.Streams
 {
+    [DataContract]
+    [ProtoContract]
     public class StreamCommand : StreamEntityBase
     {
         public StreamCommand() :
@@ -8,6 +13,9 @@ namespace RealtimePersister.Models.Streams
         {
         }
 
+        [JsonProperty(PropertyName = "command")]
+        [DataMember]
+        [ProtoMember(7)]
         public StreamCommandType Command { get; set; }
     }
 }
