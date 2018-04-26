@@ -65,6 +65,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CosmosDb\CosmosDbStreamPersister.cs" />
+    <Compile Include="CosmosDb\CosmosDBStreamPersisterBatch.cs" />
     <Compile Include="CosmosDb\CosmosDbStreamPersisterFactory.cs" />
     <Compile Include="DataIngesterRunner.cs" />
     <Compile Include="DataLayer.cs" />

@@ -151,5 +151,17 @@ namespace RealtimePersister.Models.Streams
         {
             return Serializer.Deserialize<StreamEntityBase>(s);
         }
-    }
+
+        public virtual Dictionary<string, object> ToKeyValueDictionary()
+        {
+            var dict = new Dictionary<string, object>();
+            dict["streamname"] = StreamName;
+            dict["sequencenumber"] = SequenceNumber;
+            dict["entitytype"] = EntityType;
+            dict["operation"] = Operation;
+            dict["id"] = Id;
+            dict["date"] = Date;
+            return dict;
+        }
+}
 }

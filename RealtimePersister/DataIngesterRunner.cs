@@ -58,7 +58,7 @@ namespace RealtimePersister
                 var marketNoCopy = marketNo;
                 marketTasks[marketNoCopy] = Task.Run(async () =>
                 {
-                    await _simulationLayer.SimulatePrices(cancellationToken, marketNoCopy, numPriceUpdatesPerSecond);
+                    await _simulationLayer.SimulatePrices(cancellationToken, marketNoCopy, numPriceUpdatesPerSecond, persister);
                     await _simulationLayer.SaveData(marketNoCopy);
                 });
             }

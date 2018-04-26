@@ -4,6 +4,7 @@ using Microsoft.Azure.Documents.Linq;
 using RealtimePersister.Models.Streams;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -21,8 +22,8 @@ namespace RealtimePersister.CosmosDb
         private static readonly FeedOptions FeedOptions = new FeedOptions
         {
             MaxItemCount = -1,
-            EnableCrossPartitionQuery = true,
-            EnableScanInQuery = true
+            EnableCrossPartitionQuery = true/*,
+            EnableScanInQuery = true*/
         };
 
         public bool SupportsBatches => false;
@@ -41,7 +42,7 @@ namespace RealtimePersister.CosmosDb
             var connectionPolicy = new ConnectionPolicy
             {
                 ConnectionMode = ConnectionMode.Direct,
-                ConnectionProtocol = Protocol.Https,
+                ConnectionProtocol = Protocol.Tcp,
                 RequestTimeout = new TimeSpan(1, 0, 0),
                 MaxConnectionLimit = 1000,
                 RetryOptions = new RetryOptions
@@ -65,16 +66,57 @@ namespace RealtimePersister.CosmosDb
 
         public Task<IStreamPersisterBatch> CreateBatch(StreamEntityType type)
         {
-            throw new NotImplementedException();
+            return Task.FromResult<IStreamPersisterBatch>(new CosmosDBStreamPersisterBatch());
         }
+
+        private int _numUpserts;
+        private double _timeSpentUpsert;
+        private DateTime _lastReported = DateTime.UtcNow;
+
+        private Dictionary<string, object> _cachedData = null;
 
         public async Task Upsert(StreamEntityBase item, IStreamPersisterBatch batch = null)
         {
+            var sw = new Stopwatch();
+            sw.Start();
             var collectionUri = UriFactory.CreateDocumentCollectionUri(_database, _collection);
 
-            var response = await _client.UpsertDocumentAsync(collectionUri, item,
+#if true
+            var task = _client.UpsertDocumentAsync(collectionUri, item.ToKeyValueDictionary(),
                     new RequestOptions { PartitionKey = new PartitionKey(item.Id) });
+#else
+            if (_cachedData == null)
+                _cachedData = item.ToKeyValueDictionary();
+            else
+                item.ToKeyValueDictionary();
+            
+            _cachedData["id"] = Guid.NewGuid().ToString();
+            var task = _client.CreateDocumentAsync(collectionUri, _cachedData, new RequestOptions() { });
+#endif
+            if (batch != null)
+            {
+                var cosmosDbBatch = batch as CosmosDBStreamPersisterBatch;
+                cosmosDbBatch.AddTask(task);
+            }
+            else
+                await task;
+            sw.Stop();
 
+            lock (this)
+            {
+                _numUpserts++;
+                _timeSpentUpsert += sw.ElapsedMilliseconds;
+                var now = DateTime.UtcNow;
+
+                if (now > (_lastReported + TimeSpan.FromSeconds(10)))
+                {
+                    if (_numUpserts > 0)
+                        Console.WriteLine($"CosmosDB Persister; Num upserts {_numUpserts / 10} / sec, Avg time per call {_timeSpentUpsert / _numUpserts} ms.");
+                    _numUpserts = 0;
+                    _timeSpentUpsert = 0;
+                    _lastReported = now;
+                }
+            }
         }
 
         public async Task Delete(StreamEntityBase item, IStreamPersisterBatch batch = null)
@@ -150,7 +192,7 @@ namespace RealtimePersister.CosmosDb
             var collectionInfo = new DocumentCollection
             {
                 Id = _collection,
-                IndexingPolicy = new IndexingPolicy { IndexingMode = IndexingMode.None, Automatic = false }
+                //IndexingPolicy = new IndexingPolicy { IndexingMode = IndexingMode.None, Automatic = false }
             };
 
             collectionInfo.PartitionKey.Paths.Add($"/id");
@@ -160,8 +202,8 @@ namespace RealtimePersister.CosmosDb
                 collectionInfo,
                 new RequestOptions
                 {
-                    OfferThroughput = _offerThroughput,
-                    ConsistencyLevel = ConsistencyLevel.Eventual
+                    OfferThroughput = _offerThroughput/*,
+                    ConsistencyLevel = ConsistencyLevel.Eventual*/
                 });
         }
     }
