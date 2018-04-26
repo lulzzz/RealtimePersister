@@ -5,9 +5,15 @@ using System.Threading.Tasks;
 
 namespace RealtimePersister
 {
+    public struct StoredLatency
+    {
+        public int NumItems;
+        public double Time;
+    }
+
     public interface IStreamPersisterBatch
     {
-        Task Commit();
+        Task<StoredLatency> Commit();
     }
 
     public interface IStreamPersister
@@ -18,8 +24,8 @@ namespace RealtimePersister
         Task Disconnect();
 
         Task<IStreamPersisterBatch> CreateBatch(StreamEntityType type);
-        Task Upsert(StreamEntityBase item, IStreamPersisterBatch tx = null);
-        Task Delete(StreamEntityBase item, IStreamPersisterBatch tx = null);
+        Task<StoredLatency> Upsert(StreamEntityBase item, IStreamPersisterBatch tx = null);
+        Task<StoredLatency> Delete(StreamEntityBase item, IStreamPersisterBatch tx = null);
         Task<IEnumerable<T>> GetAll<T>(StreamEntityType entityType) where T : StreamEntityBase;
         Task<T> GetById<T>(StreamEntityType entityType, string id) where T : StreamEntityBase;
         Task<IEnumerable<T>> GetFromSequenceNumber<T>(StreamEntityType entityType, 

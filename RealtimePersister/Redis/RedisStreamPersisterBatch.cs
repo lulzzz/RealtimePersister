@@ -1,4 +1,5 @@
-﻿using StackExchange.Redis;
+﻿using RealtimePersister.Models.Streams;
+using StackExchange.Redis;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -8,23 +9,29 @@ namespace RealtimePersister.Redis
     {
         public IBatch Batch { get; private set; }
         protected List<Task> Tasks { get; } = new List<Task>();
+        protected List<StreamEntityBase> Items { get; } = new List<StreamEntityBase>();
 
         public RedisStreamPersisterBatch(IDatabase db)
         {
             Batch = db.CreateBatch();
         }
 
-        public async Task Commit()
+        public async Task<StoredLatency> Commit()
         {
             Batch.Execute();
             await Task.WhenAll(Tasks);
+            return new StoredLatency() { NumItems = Items.Count, Time = StreamEntityPersisterPartition.GetStoredLatency(Items) };
         }
 
-        public void AddTask(Task task)
+        public void AddItem(StreamEntityBase item, Task task)
         {
-            lock (this)
+            if (item != null && task != null)
             {
-                Tasks.Add(task);
+                lock (this)
+                {
+                    Items.Add(item);
+                    Tasks.Add(task);
+                }
             }
         }
     }

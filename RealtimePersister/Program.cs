@@ -1,4 +1,6 @@
-﻿using System.Threading;
+﻿using System;
+using System.Linq;
+using System.Threading;
 
 namespace RealtimePersister
 {
@@ -11,7 +13,11 @@ namespace RealtimePersister
             _dataIngesterRunner = new DataIngesterRunner();
             CancellationTokenSource tokenSource = new CancellationTokenSource();
 
-            var mainLoop = _dataIngesterRunner.RunSimulationAsync(tokenSource.Token);
+            int startMarketNo = 0;
+            if (args.Count() > 0)
+                startMarketNo = Int32.Parse(args[0]);
+
+            var mainLoop = _dataIngesterRunner.RunSimulationAsync(tokenSource.Token, startMarketNo);
 
             System.Console.WriteLine("Press Enter to stop running");
             System.Console.ReadLine();

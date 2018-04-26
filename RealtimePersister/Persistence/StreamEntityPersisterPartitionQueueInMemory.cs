@@ -89,10 +89,14 @@ namespace RealtimePersister
                             var processItemPair = processItems.First();
                             if (processItems.Remove(processItemPair.Key))
                             {
+                                StoredLatency storedLatency;
                                 if (processItemPair.Value.DeleteItem != null)
-                                    await _persister.Delete(processItemPair.Value.DeleteItem, batch);
+                                    storedLatency = await _persister.Delete(processItemPair.Value.DeleteItem, batch);
                                 else if (processItemPair.Value.UpsertItem != null)
-                                    await _persister.Upsert(processItemPair.Value.UpsertItem, batch);
+                                    storedLatency = await _persister.Upsert(processItemPair.Value.UpsertItem, batch);
+                                else
+                                    storedLatency = new StoredLatency() { NumItems = 0, Time = 0.0 };
+                                ReportLatency(storedLatency);
                                 storedItems++;
                                 anyDataProcessed = true;
 
@@ -107,9 +111,13 @@ namespace RealtimePersister
                     }
 
                     if (batch != null)
-                        await batch.Commit();
+                    {
+                        var storedLatency = await batch.Commit();
+                        ReportLatency(storedLatency);
+                    }
                 }
 
+                DisplayLatency();
                 await Task.Delay(anyDataProcessed ? _holdOffBusy : _holdOffIdle);
             }
         }

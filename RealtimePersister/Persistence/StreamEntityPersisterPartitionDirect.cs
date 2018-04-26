@@ -1,4 +1,5 @@
 ﻿using RealtimePersister.Models.Streams;
+using System;
 using System.Threading.Tasks;
 
 namespace RealtimePersister
@@ -7,14 +8,12 @@ namespace RealtimePersister
     {
         private IStreamPersisterBatch _batch;
         private int _numItemsPerBatch;
-        private bool _waitForCompletion;
         private int _currentNumItemsInBatch;
 
-        public StreamEntityPersisterPartitionDirect(IStreamPersister persister, StreamEntityType entityType, int partitionKey, int numItemsPerBatch = 0, bool waitForCompletion = true)
+        public StreamEntityPersisterPartitionDirect(IStreamPersister persister, StreamEntityType entityType, int partitionKey, int numItemsPerBatch = 0)
             : base(persister, entityType, partitionKey)
         {
             _numItemsPerBatch = numItemsPerBatch;
-            _waitForCompletion = waitForCompletion;
         }
         public override async Task ProcessStreamItem(StreamEntityBase item)
         {
@@ -26,21 +25,25 @@ namespace RealtimePersister
                     _currentNumItemsInBatch = 0;
                 }
 
-                var task = (item.Operation == StreamOperation.Insert || item.Operation == StreamOperation.Update ? _persister.Upsert(item, _batch) : _persister.Delete(item, _batch));
+                var result = (item.Operation == StreamOperation.Insert || item.Operation == StreamOperation.Update ? _persister.Upsert(item, _batch) : _persister.Delete(item, _batch));
                 if (_batch != null)
                 {
-                    await task;
                     _currentNumItemsInBatch++;
                     if (_currentNumItemsInBatch >= _numItemsPerBatch)
                     {
-                        if (_waitForCompletion)
-                            await _batch.Commit();
+                        var storedLatency = await _batch.Commit();
+                        ReportLatency(storedLatency);
                         _batch = null;
                     }
                 }
-                else if (_waitForCompletion)
-                    await task;
+                else
+                {
+                    var storedLatency = await result;
+                    ReportLatency(storedLatency);
+                }
             }
+
+            DisplayLatency();
         }
     }
 }
