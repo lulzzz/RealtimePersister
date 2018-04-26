@@ -59,6 +59,7 @@
     <Folder Include="Properties" />
     <Folder Include="Tables" />
     <Folder Include="Procs" />
+    <Folder Include="Types" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="Tables\Instrument.sql" />
@@ -80,6 +81,7 @@
     <Build Include="Procs\UpdatePrice.sql" />
     <Build Include="Procs\UpsertPrice.sql" />
     <Build Include="Procs\InsertPrice.sql" />
+    <Build Include="Types\PriceTableType.sql" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="Tables\Submarket.sql" />

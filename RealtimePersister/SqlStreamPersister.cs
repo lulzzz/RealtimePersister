@@ -18,18 +18,20 @@ namespace RealtimePersister
         }
     }
 
-    public class SqlStreamPersister : IStreamPersister
+    public class SqlStreamPersister : IStreamPersister, IStreamPersisterBatch
     {
         string connectionString = "Server=andersth-sql-wus2.database.windows.net;Database=StreamEntityPersist;Integrated Security=False;User Id=andersth;Password=P@ssword.666";
         //string connectionString = "Server=10.0.30.179;Database=StreamEntityPersist;Integrated Security=True";
         string database;
+
+        DataTable currentBatch;
 
         public SqlStreamPersister(string database)
         {
             this.database = database;
         }
 
-        public bool SupportsBatches => false;
+        public bool SupportsBatches => true;
 
         public async Task<bool> Connect()
         {
@@ -38,7 +40,17 @@ namespace RealtimePersister
 
         public async Task<IStreamPersisterBatch> CreateBatch(StreamEntityType type)
         {
-            return null;
+            currentBatch = new DataTable();
+            // CREATE TYPE [dbo].[PriceTableType] AS TABLE
+            // (
+            //	 InstrumentId INT, Price FLOAT, PriceDate DATETIME, Timestamp DATETIME, SequenceNumber bigint
+            // )
+            currentBatch.Columns.Add("InstrumentId", typeof(int));
+            currentBatch.Columns.Add("Price", typeof(double));
+            currentBatch.Columns.Add("PriceDate", typeof(DateTime));
+            currentBatch.Columns.Add("Timestamp", typeof(DateTime));
+            currentBatch.Columns.Add("SequenceNumber", typeof(long));
+            return this;
         }
 
         public Task Delete(StreamEntityBase item, IStreamPersisterBatch tx = null)
@@ -93,16 +105,41 @@ namespace RealtimePersister
                     await InsertRule(item as StreamRule);
                 }
             } else if (item.EntityType == StreamEntityType.Price) {
-                await UpsertPrice(item as StreamPrice);
+                if (tx != null) {
+                    await UpsertPrice(item as StreamPrice);
+                } else {
+                    UpsertPriceBatch(item as StreamPrice);
+                }
             } else {
                 Debugger.Break();
             }
         }
 
+        private void UpsertPriceBatch(StreamPrice price)
+        {
+            var IntrumentTmp = price.Id.Split(':')[1];
+            var InstrumentIdSplit = IntrumentTmp.Split('-');
+            var MarketId = int.Parse(InstrumentIdSplit[0]);
+            var SubmarketId = int.Parse(InstrumentIdSplit[1]);
+            var Id = int.Parse(InstrumentIdSplit[2]);
+
+            currentBatch.Rows.Add((MarketId * 10 + SubmarketId) * 1000000 + Id, price.PriceLatest, price.PriceDate, price.Date, price.SequenceNumber);
+        }
+
+        public async Task Commit()
+        {
+            var CallSPCmd = new SqlCommand();
+            await DoSqlCmd(CallSPCmd, () =>
+            {
+                CallSPCmd.CommandText = "exec UpsertPriceBatch @PriceTable";
+                CallSPCmd.Parameters.Add("@PriceTable", SqlDbType.Structured).Value = currentBatch;
+            });
+        }
+
         private async Task UpsertPrice(StreamPrice price)
         {
-            var InsertCmd = new SqlCommand();
-            await Insert(InsertCmd, () =>
+            var CallSPCmd = new SqlCommand();
+            await DoSqlCmd(CallSPCmd, () =>
             {
                 var IntrumentTmp = price.Id.Split(':')[1];
                 var InstrumentIdSplit = IntrumentTmp.Split('-');
@@ -110,116 +147,116 @@ namespace RealtimePersister
                 var SubmarketId = int.Parse(InstrumentIdSplit[1]);
                 var Id = int.Parse(InstrumentIdSplit[2]);
 
-                InsertCmd.CommandText = "exec UpsertPrice @InstrumentId, @Price, @PriceLatest, @Timestamp, @SequenceNumber";
-                InsertCmd.Parameters.Add("@InstrumentId", SqlDbType.Int).Value = (MarketId * 10 + SubmarketId) * 1000000 + Id;
-                InsertCmd.Parameters.Add("@Price", SqlDbType.Float).Value = price.PriceLatest;
-                InsertCmd.Parameters.Add("@Pricelatest", SqlDbType.DateTime).Value = price.Date;
-                InsertCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = price.Date;
-                InsertCmd.Parameters.Add("@SequenceNumber", SqlDbType.BigInt).Value = price.SequenceNumber;
+                CallSPCmd.CommandText = "exec UpsertPrice @InstrumentId, @Price, @PriceLatest, @Timestamp, @SequenceNumber";
+                CallSPCmd.Parameters.Add("@InstrumentId", SqlDbType.Int).Value = (MarketId * 10 + SubmarketId) * 1000000 + Id;
+                CallSPCmd.Parameters.Add("@Price", SqlDbType.Float).Value = price.PriceLatest;
+                CallSPCmd.Parameters.Add("@Pricelatest", SqlDbType.DateTime).Value = price.PriceDate;
+                CallSPCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = price.Date;
+                CallSPCmd.Parameters.Add("@SequenceNumber", SqlDbType.BigInt).Value = price.SequenceNumber;
             });
         }
 
         private async Task InsertRule(StreamRule rule)
         {
-            var InsertCmd = new SqlCommand();
-            await Insert(InsertCmd, () =>
+            var CallSPCmd = new SqlCommand();
+            await DoSqlCmd(CallSPCmd, () =>
             {
                 var Id = int.Parse(rule.Id.Split('-')[1]);
                 var PortfolioId = int.Parse(rule.PortfolioId.Split(':')[1]);
-                InsertCmd.CommandText = "exec InsertRule @Id, @PortfolioId, @Expression, @Timestamp";
-                InsertCmd.Parameters.Add("@Id", SqlDbType.Int).Value = PortfolioId * 1000000+Id;
-                InsertCmd.Parameters.Add("@PortfolioId", SqlDbType.Int).Value = PortfolioId;
-                InsertCmd.Parameters.Add("@Expression", SqlDbType.NVarChar).Value = rule.Expression;
-                InsertCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = rule.Date;
+                CallSPCmd.CommandText = "exec InsertRule @Id, @PortfolioId, @Expression, @Timestamp";
+                CallSPCmd.Parameters.Add("@Id", SqlDbType.Int).Value = PortfolioId * 1000000+Id;
+                CallSPCmd.Parameters.Add("@PortfolioId", SqlDbType.Int).Value = PortfolioId;
+                CallSPCmd.Parameters.Add("@Expression", SqlDbType.NVarChar).Value = rule.Expression;
+                CallSPCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = rule.Date;
             });
         }
 
         private async Task InsertPosition(StreamPosition position)
         {
-            var InsertCmd = new SqlCommand();
-            await Insert(InsertCmd, () =>
+            var CallSPCmd = new SqlCommand();
+            await DoSqlCmd(CallSPCmd, () =>
             {
                 var Id = int.Parse(position.Id.Split('-')[1]);
                 var InstrumentId = int.Parse(position.InstrumentId.Split('-')[2]);
                 var PortfolioId = int.Parse(position.PortfolioId.Split(':')[1]);
-                InsertCmd.CommandText = "exec InsertPosition @Id, @InstrumentId, @PortfolioId, @Volume, @Price, @Timestamp";
-                InsertCmd.Parameters.Add("@Id", SqlDbType.Int).Value = PortfolioId*1000000+Id;
-                InsertCmd.Parameters.Add("@InstrumentId", SqlDbType.Int).Value = InstrumentId;
-                InsertCmd.Parameters.Add("@PortfolioId", SqlDbType.Int).Value = PortfolioId;
-                InsertCmd.Parameters.Add("@Volume", SqlDbType.Int).Value = position.Volume;
-                InsertCmd.Parameters.Add("@Price", SqlDbType.Int).Value = position.Price;
-                InsertCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = position.Date;
+                CallSPCmd.CommandText = "exec InsertPosition @Id, @InstrumentId, @PortfolioId, @Volume, @Price, @Timestamp";
+                CallSPCmd.Parameters.Add("@Id", SqlDbType.Int).Value = PortfolioId*1000000+Id;
+                CallSPCmd.Parameters.Add("@InstrumentId", SqlDbType.Int).Value = InstrumentId;
+                CallSPCmd.Parameters.Add("@PortfolioId", SqlDbType.Int).Value = PortfolioId;
+                CallSPCmd.Parameters.Add("@Volume", SqlDbType.Int).Value = position.Volume;
+                CallSPCmd.Parameters.Add("@Price", SqlDbType.Int).Value = position.Price;
+                CallSPCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = position.Date;
             });
         }
 
         private async Task InsertPortfolio(StreamPortfolio portfolio)
         {
-            var InsertCmd = new SqlCommand();
-            await Insert(InsertCmd, () =>
+            var CallSPCmd = new SqlCommand();
+            await DoSqlCmd(CallSPCmd, () =>
             {
                 var Id = int.Parse(portfolio.Id.Split(':')[1]);
-                InsertCmd.CommandText = "exec InsertPortfolio @Id, @Name, @Balance, @CheckRules, @Timestamp";
-                InsertCmd.Parameters.Add("@Id", SqlDbType.Int).Value = Id;
-                InsertCmd.Parameters.Add("@Name", SqlDbType.NVarChar).Value = portfolio.Name;
-                InsertCmd.Parameters.Add("@Balance", SqlDbType.Float).Value = portfolio.Balance;
-                InsertCmd.Parameters.Add("@CheckRules", SqlDbType.Bit).Value = portfolio.CheckRules;
-                InsertCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = portfolio.Date;
+                CallSPCmd.CommandText = "exec InsertPortfolio @Id, @Name, @Balance, @CheckRules, @Timestamp";
+                CallSPCmd.Parameters.Add("@Id", SqlDbType.Int).Value = Id;
+                CallSPCmd.Parameters.Add("@Name", SqlDbType.NVarChar).Value = portfolio.Name;
+                CallSPCmd.Parameters.Add("@Balance", SqlDbType.Float).Value = portfolio.Balance;
+                CallSPCmd.Parameters.Add("@CheckRules", SqlDbType.Bit).Value = portfolio.CheckRules;
+                CallSPCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = portfolio.Date;
             });
         }
 
         private async Task InsertInstrument(StreamInstrument instrument)
         {
-            var InsertCmd = new SqlCommand();
-            await Insert(InsertCmd, () =>
+            var CallSPCmd = new SqlCommand();
+            await DoSqlCmd(CallSPCmd, () =>
             {
                 var InstrumentIdTmp = instrument.Id.Split(':')[1];
                 var InstrumentIdSplit = InstrumentIdTmp.Split('-');
                 var MarketId = int.Parse(InstrumentIdSplit[0]);
                 var SubmarketId = int.Parse(InstrumentIdSplit[1]);
                 var Id = int.Parse(InstrumentIdSplit[2]);
-                InsertCmd.CommandText = "exec InsertInstrument @Id, @SubmarketId, @Name, @Timestamp";
-                InsertCmd.Parameters.Add("@Id", SqlDbType.Int).Value = (MarketId*10+SubmarketId)*1000000+Id;
-                InsertCmd.Parameters.Add("@SubmarketId", SqlDbType.Int).Value = SubmarketId;
-                InsertCmd.Parameters.Add("@Name", SqlDbType.NVarChar).Value = instrument.Name;
-                InsertCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = instrument.Date;
+                CallSPCmd.CommandText = "exec InsertInstrument @Id, @SubmarketId, @Name, @Timestamp";
+                CallSPCmd.Parameters.Add("@Id", SqlDbType.Int).Value = (MarketId*10+SubmarketId)*1000000+Id;
+                CallSPCmd.Parameters.Add("@SubmarketId", SqlDbType.Int).Value = SubmarketId;
+                CallSPCmd.Parameters.Add("@Name", SqlDbType.NVarChar).Value = instrument.Name;
+                CallSPCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = instrument.Date;
             });
         }
 
         private async Task InsertSubmarket(StreamSubmarket submarket)
         {
-            var InsertCmd = new SqlCommand();
-            await Insert(InsertCmd, () =>
+            var CallSPCmd = new SqlCommand();
+            await DoSqlCmd(CallSPCmd, () =>
             {
                 var Id = int.Parse(submarket.Id.Split('-')[1]);
                 var MarketId = int.Parse(submarket.MarketId.Split(':')[1]);
-                InsertCmd.CommandText = "exec InsertSubmarket @Id, @MarketId, @Name, @Timestamp";
-                InsertCmd.Parameters.Add("@Id", SqlDbType.Int).Value = Id;
-                InsertCmd.Parameters.Add("@MarketId", SqlDbType.Int).Value = MarketId;
-                InsertCmd.Parameters.Add("@Name", SqlDbType.NVarChar).Value = submarket.Name;
-                InsertCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = submarket.Date;
+                CallSPCmd.CommandText = "exec InsertSubmarket @Id, @MarketId, @Name, @Timestamp";
+                CallSPCmd.Parameters.Add("@Id", SqlDbType.Int).Value = Id;
+                CallSPCmd.Parameters.Add("@MarketId", SqlDbType.Int).Value = MarketId;
+                CallSPCmd.Parameters.Add("@Name", SqlDbType.NVarChar).Value = submarket.Name;
+                CallSPCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = submarket.Date;
             });
         }
 
         private async Task InsertMarket(StreamMarket market)
         {
-            var InsertCmd = new SqlCommand();
-            await Insert(InsertCmd, () =>
+            var CallSPCmd = new SqlCommand();
+            await DoSqlCmd(CallSPCmd, () =>
             {
                 var Id = int.Parse(market.Id.Split(':')[1]);
-                InsertCmd.CommandText = "exec InsertMarket @Id, @Name, @Timestamp";
-                InsertCmd.Parameters.Add("@Id", SqlDbType.Int).Value = Id;
-                InsertCmd.Parameters.Add("@Name", SqlDbType.NVarChar).Value = market.Name;
-                InsertCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = market.Date;
+                CallSPCmd.CommandText = "exec InsertMarket @Id, @Name, @Timestamp";
+                CallSPCmd.Parameters.Add("@Id", SqlDbType.Int).Value = Id;
+                CallSPCmd.Parameters.Add("@Name", SqlDbType.NVarChar).Value = market.Name;
+                CallSPCmd.Parameters.Add("@Timestamp", SqlDbType.DateTime).Value = market.Date;
             });
         }
 
-        private async Task Insert(SqlCommand InsertCmd, Action setupParameters)
+        private async Task DoSqlCmd(SqlCommand SqlCmd, Action setupParameters)
         {
             using (var conn = new SqlConnection(connectionString)) {
                 await conn.OpenAsync();
-                InsertCmd.Connection = conn;
+                SqlCmd.Connection = conn;
                 setupParameters();
-                await InsertCmd.ExecuteNonQueryAsync();
+                await SqlCmd.ExecuteNonQueryAsync();
             }
         }
     }
