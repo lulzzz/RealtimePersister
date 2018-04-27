@@ -19,15 +19,14 @@ namespace RealtimePersister.CosmosDb
             _sprocLink = sprocLink;
         }
 
-        public async Task Commit()
+        public async Task<StoredLatency> Commit()
         {
             var partitionKey = _items.First()[nameof(StreamEntityBase.PartitionKey)];
 
             var response = await _client.ExecuteStoredProcedureAsync<string>(_sprocLink, 
                 new RequestOptions { PartitionKey = new Microsoft.Azure.Documents.PartitionKey(partitionKey) }, 
                 new { docs = _items });
-
-            //var ru = response.RequestCharge;
+            return new StoredLatency() { NumItems = _items.Count, Time = StreamEntityPersisterPartition.GetStoredLatency(_items) };
         }
 
         public void AddItem(Dictionary<string, object> item)

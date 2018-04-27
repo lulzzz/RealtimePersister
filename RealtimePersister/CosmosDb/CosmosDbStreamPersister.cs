@@ -76,8 +76,9 @@ namespace RealtimePersister.CosmosDb
         private double _timeSpentUpsert;
         private DateTime _lastReported = DateTime.UtcNow;
 
-        public async Task Upsert(StreamEntityBase item, IStreamPersisterBatch batch = null)
+        public async Task<StoredLatency> Upsert(StreamEntityBase item, IStreamPersisterBatch batch = null)
         {
+            StoredLatency storedLatency;
             var sw = new Stopwatch();
             sw.Start();
             var collectionUri = UriFactory.CreateDocumentCollectionUri(_database, _collection);
@@ -87,11 +88,13 @@ namespace RealtimePersister.CosmosDb
             {
                 var cosmosDbBatch = batch as CosmosDBStreamPersisterBatch;
                 cosmosDbBatch.AddItem(itemDictionary);
+                storedLatency = new StoredLatency() { NumItems = 0, Time = 0.0 };
             }
             else
             {
                 await _client.UpsertDocumentAsync(collectionUri, itemDictionary,
                       new RequestOptions { PartitionKey = new PartitionKey(item.PartitionKey) });
+                storedLatency = new StoredLatency() { NumItems = 1, Time = StreamEntityPersisterPartition.GetStoredLatency(item) };
             }
             sw.Stop();
 
@@ -110,11 +113,14 @@ namespace RealtimePersister.CosmosDb
                     _lastReported = now;
                 }
             }
+
+            return storedLatency;
         }
 
-        public async Task Delete(StreamEntityBase item, IStreamPersisterBatch batch = null)
+        public async Task<StoredLatency> Delete(StreamEntityBase item, IStreamPersisterBatch batch = null)
         {
             await _client.DeleteDocumentAsync(UriFactory.CreateDocumentUri(_database, _collection, item.Id));
+            return new StoredLatency() { NumItems = 1, Time = StreamEntityPersisterPartition.GetStoredLatency(item) };
         }
 
         public async Task<IEnumerable<T>> GetAll<T>(StreamEntityType entityType) where T : StreamEntityBase

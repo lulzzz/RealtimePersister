@@ -15,7 +15,7 @@ namespace RealtimePersister
         {
             SimulationReceiver simulationReceiver = new SimulationReceiver(_dataLayer);
 
-            int numThreads = 1;
+            int numThreads = 8;
             int numSubmarketsPerMarket = 4;
             int numInstrumentsPerMarket = 1000;
             int numPortfolios = 1000;
@@ -26,8 +26,8 @@ namespace RealtimePersister
             _simulationLayer = new SimulationLayer(simulationReceiver);
 
             // Persister Factory
-            IStreamPersisterFactory persisterFactory = new CosmosDbStreamPersisterFactory();
-            //IStreamPersisterFactory persisterFactory = new RealtimePersister.Redis.StreamPersisterFactory("pb-syncweek-redis.redis.cache.windows.net:6380,password=IG1aBMjxzo0uE106LJT+Ceigc1AZldzwd9HYDDKIdBc=,ssl=True,abortConnect=False");
+            //IStreamPersisterFactory persisterFactory = new CosmosDbStreamPersisterFactory();
+            IStreamPersisterFactory persisterFactory = new RealtimePersister.Redis.StreamPersisterFactory("pb-syncweek-redis.redis.cache.windows.net:6380,password=IG1aBMjxzo0uE106LJT+Ceigc1AZldzwd9HYDDKIdBc=,ssl=True,abortConnect=False");
             IStreamPersister persister = null;
 
             if (persisterFactory != null)
