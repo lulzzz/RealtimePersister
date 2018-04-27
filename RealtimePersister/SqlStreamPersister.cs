@@ -60,6 +60,7 @@ namespace RealtimePersister
     public class SqlStreamPersister : IStreamPersister
     {
         string _connectionString = "Server=andersth-sql-wus2.database.windows.net;Database=StreamEntityPersist;Integrated Security=False;User Id=andersth;Password=P@ssword.666";
+        //string _connectionString = "Server=andersth-sql-wus2.database.windows.net;Database=StreamEntityPersist2;Integrated Security=False;User Id=andersth;Password=P@ssword.666";
         //string _connectionString = "Server=10.0.30.179;Database=StreamEntityPersist;Integrated Security=True";
 
         public SqlStreamPersister()

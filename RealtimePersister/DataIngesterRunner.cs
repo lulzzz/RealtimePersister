@@ -36,21 +36,17 @@ namespace RealtimePersister
             // initialize the data layer
             await _dataLayer.Initialize(cancellationToken, _persistenceLayer);
 
+            for (int marketNo = 0; marketNo < numThreads; marketNo++) {
+                bool addedData = await _simulationLayer.GenerateData(marketNo, numSubmarketsPerMarket, numInstrumentsPerMarket,
+                    (marketNo == 0 ? numPortfolios : 0), (marketNo == 0 ? maxPositionsPerPortfolio : 0), (marketNo == 0 ? maxRulesPerPortfolio : 0));
+            }
+
             var marketTasks = new Task[numThreads];
-            for (int marketNo = 0; marketNo < numThreads; marketNo++)
-            {
+            for (int marketNo = 0; marketNo < numThreads; marketNo++) {
                 var marketNoCopy = marketNo;
                 marketTasks[marketNoCopy] = Task.Run(async () =>
                 {
-                    await _simulationLayer.LoadData(marketNoCopy);
-                    bool addedData = await _simulationLayer.GenerateData(marketNoCopy, numSubmarketsPerMarket, numInstrumentsPerMarket, 
-                        (marketNoCopy == 0 ? numPortfolios : 0), (marketNoCopy == 0 ? maxPositionsPerPortfolio : 0), (marketNoCopy == 0 ? maxRulesPerPortfolio : 0));
-                    if (addedData)
-                    {
-                        await _simulationLayer.SaveData(marketNoCopy);
-                    }
                     await _simulationLayer.SimulatePrices(cancellationToken, marketNoCopy, numPriceUpdatesPerSecond);
-                    await _simulationLayer.SaveData(marketNoCopy);
                 });
             }
             await Task.WhenAll(marketTasks);

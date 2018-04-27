@@ -47,6 +47,7 @@ namespace RealtimePersister.Models.Simulation
             int numPortfolios = 0;
             bool addedData = false;
 
+#if false
             // check to see if we need generate more data. We use numInstruments and numPortfolios to do this
             foreach (var market in MarketsById.Values)
             {
@@ -56,21 +57,26 @@ namespace RealtimePersister.Models.Simulation
                 }
             }
             numPortfolios = PortfoliosById.Count;
+#endif
 
             // TODO: Let's go nuts here and generate a ton of random (or semi random shit)
             // If we use the same seed we should alwyays end up with the same result given that the parameters
             // are the same.
             var rand = new Random(25839);
 
-            if (numInstruments < numInstrumentsToGenerate)
+            if (true)
             {
                 addedData = true;
                 // generate markets, submarkets and instruments
                 if (numInstruments == 0)
                 {
                     var market = await GenerateMarket(marketNo, numSubmarketsPerMarket, numInstrumentsToGenerate, rand);
-                    MarketsById[market.Id] = market;
-                    MarketsByName[market.Name] = market.Id;
+                    lock (MarketsById) {
+                        MarketsById[market.Id] = market;
+                    }
+                    lock (MarketsByName) {
+                        MarketsByName[market.Name] = market.Id;
+                    }
                 }
                 else
                 {
@@ -313,8 +319,7 @@ namespace RealtimePersister.Models.Simulation
                 }
 
                 // this loop repeats every second
-                do
-                {
+                do {
                     int numSubmarkets = submarkets.Count;
                     int submarketNo = 0;
                     var swSecond = new Stopwatch();
@@ -323,6 +328,7 @@ namespace RealtimePersister.Models.Simulation
                     {
                         var swSlot = new Stopwatch();
                         swSlot.Start();
+
                         for (int numUpdatesInSlot = 0; numUpdatesInSlot < priceUpdatesPerSlot; numUpdatesInSlot++)
                         {
                             var submarketInfo = submarkets[submarketNo];
