@@ -18,7 +18,7 @@ namespace RealtimePersister
             for (int partitionKey = 0; partitionKey < _partitions.Count(); partitionKey++)
             {
                 if (direct)
-                    _partitions[partitionKey] = new StreamEntityPersisterPartitionDirect(persister, entityType, partitionKey, 100, true);
+                    _partitions[partitionKey] = new StreamEntityPersisterPartitionDirect(persister, entityType, partitionKey, 100);
                 else
                 {
                     var persisterPartition = new StreamEntityPersisterPartitionQueueInMemory(persister, entityType, partitionKey, holdOffBusy, holdOffIdle);

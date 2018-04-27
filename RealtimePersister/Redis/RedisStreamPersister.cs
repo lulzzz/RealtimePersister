@@ -55,28 +55,40 @@ namespace RealtimePersister.Redis
             return Task.FromResult<IStreamPersisterBatch>(new RedisStreamPersisterBatch(_db));
         }
 
-        public async Task Upsert(StreamEntityBase item, IStreamPersisterBatch batch = null)
+        public async Task<StoredLatency> Upsert(StreamEntityBase item, IStreamPersisterBatch batch = null)
         {
+            double storedLatency = 0.0;
             var data = item.ToProtoBufByteArray();
             if (batch != null)
             {
                 RedisStreamPersisterBatch stx = batch as RedisStreamPersisterBatch;
-                stx.AddTask(stx.Batch.HashSetAsync($"{_databaseName}-{item.EntityType}", item.Id, data));
+                stx.AddItem(item, stx.Batch.HashSetAsync($"{_databaseName}-{item.EntityType}", item.Id, data));
+                storedLatency = 0.0;
             }
             else
+            {
                 await _db.HashSetAsync($"{_databaseName}-{item.EntityType}", item.Id, data);
+                storedLatency = StreamEntityPersisterPartition.GetStoredLatency(item);
+            }
             Interlocked.Increment(ref _numUpserts);
+            return new StoredLatency { NumItems = (batch == null ? 1 : 0), Time = storedLatency };
         }
 
-        public async Task Delete(StreamEntityBase item, IStreamPersisterBatch batch = null)
+        public async Task<StoredLatency> Delete(StreamEntityBase item, IStreamPersisterBatch batch = null)
         {
+            double storedLatency = 0.0;
             if (batch != null)
             {
                 RedisStreamPersisterBatch stx = batch as RedisStreamPersisterBatch;
-                stx.AddTask(stx.Batch.HashDeleteAsync($"{_databaseName}-{item.EntityType}", item.Id));
+                stx.AddItem(item, stx.Batch.HashDeleteAsync($"{_databaseName}-{item.EntityType}", item.Id));
+                storedLatency = 0.0;
             }
             else
+            {
                 await _db.HashDeleteAsync($"{_databaseName}-{item.EntityType}", item.Id);
+                storedLatency = StreamEntityPersisterPartition.GetStoredLatency(item);
+            }
+            return new StoredLatency { NumItems = (batch == null ? 1 : 0), Time = storedLatency };
         }
 
         public Task<IEnumerable<T>> GetAll<T>(StreamEntityType entityType) where T : StreamEntityBase

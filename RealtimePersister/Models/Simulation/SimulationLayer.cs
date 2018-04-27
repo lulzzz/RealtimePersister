@@ -40,88 +40,25 @@ namespace RealtimePersister.Models.Simulation
                 await SavePortfolios("portfolios.json");
         }
 
-        public async Task<bool> GenerateData(int marketNo, int numSubmarketsPerMarket = 4, int numInstrumentsToGenerate = 1000,
+        public async Task GenerateData(int marketNo, int numSubmarketsPerMarket = 4, int numInstrumentsToGenerate = 1000,
             int numPortfoliosToGenerate = 1000, int maxPositionsPerPortfolio = 50, int maxRulesPerPortfolio = 20)
         {
-            int numInstruments = 0;
-            int numPortfolios = 0;
-            bool addedData = false;
-
-            // check to see if we need generate more data. We use numInstruments and numPortfolios to do this
-            foreach (var market in MarketsById.Values)
-            {
-                foreach (var submarket in market.SubmarketsById.Values)
-                {
-                    numInstruments += submarket.NumInstruments;
-                }
-            }
-            numPortfolios = PortfoliosById.Count;
-
             // TODO: Let's go nuts here and generate a ton of random (or semi random shit)
             // If we use the same seed we should alwyays end up with the same result given that the parameters
             // are the same.
             var rand = new Random(25839);
 
-            if (numInstruments < numInstrumentsToGenerate)
+            var market = await GenerateMarket(marketNo, numSubmarketsPerMarket, numInstrumentsToGenerate, rand);
+            MarketsById[market.Id] = market;
+            MarketsByName[market.Name] = market.Id;
+
+            // generate portfolios and positions
+            for (int portfolioNo = 0; portfolioNo < numPortfoliosToGenerate; portfolioNo++)
             {
-                addedData = true;
-                // generate markets, submarkets and instruments
-                if (numInstruments == 0)
-                {
-                    var market = await GenerateMarket(marketNo, numSubmarketsPerMarket, numInstrumentsToGenerate, rand);
-                    MarketsById[market.Id] = market;
-                    MarketsByName[market.Name] = market.Id;
-                }
-                else
-                {
-                    // How manu more instruments to generate
-                    int numInstrumentsToAdd = numInstrumentsToGenerate - numInstruments;
-                    // how many submarkets do we have?
-                    int numSubmarkets = 0;
-                    foreach (var market in MarketsById.Values)
-                    {
-                        numSubmarkets += market.SubmarketsById.Count;
-                    }
-
-                    int numInstrumentsToAddPerSubmarket = (numInstrumentsToAdd / numSubmarkets) + 1;
-
-                    int marketNoLoop = 0;
-
-                    foreach (var market in MarketsById.Values)
-                    {
-                        int submarketNo = 0;
-
-                        foreach (var submarket in market.SubmarketsById.Values)
-                        {
-                            int instrumentNoBase = submarket.NumInstruments;
-
-                            for (int instrumentNo = 0; instrumentNo < numInstrumentsToAddPerSubmarket; instrumentNo++)
-                            {
-                                var instrument = await GenerateInstrument(submarket.Id, marketNoLoop, submarketNo, instrumentNoBase + instrumentNo, rand);
-                                submarket.InstrumentsById[instrument.Id] = instrument;
-                                submarket.InstrumentsByName[instrument.Name] = instrument.Id;
-                                submarket.NumInstruments++;
-                            }
-                            submarketNo++;
-                        }
-                        marketNoLoop++;
-                    }
-                }
+                var portfolio = await GeneratePortfolio(portfolioNo, maxPositionsPerPortfolio, maxRulesPerPortfolio, rand);
+                PortfoliosById[portfolio.Id] = portfolio;
+                PortfoliosByName[portfolio.Name] = portfolio.Id;
             }
-
-            if (numPortfolios < numPortfoliosToGenerate)
-            {
-                addedData = true;
-                // generate portfolios and positions
-                for (int portfolioNo = numPortfolios; portfolioNo < numPortfoliosToGenerate; portfolioNo++)
-                {
-                    var portfolio = await GeneratePortfolio(portfolioNo, maxPositionsPerPortfolio, maxRulesPerPortfolio, rand);
-                    PortfoliosById[portfolio.Id] = portfolio;
-                    PortfoliosByName[portfolio.Name] = portfolio.Id;
-                }
-            }
-
-            return addedData;
         }
 
         protected async Task<Market> GenerateMarket(int marketNo, int numSubmarketsPerMarket, int numInstruments, Random rand)

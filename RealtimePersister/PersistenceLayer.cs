@@ -20,7 +20,7 @@ namespace RealtimePersister
 
             bool persistSynchronously = false;
 
-            //_streamEntityPersisters[(int)StreamEntityType.Market] = new StreamEntityPersister(StreamEntityType.Market, persister, cancellationToken, 1, persistSynchronously, 50, 100);
+#if false
             //_streamEntityPersisters[(int)StreamEntityType.Submarket] = new StreamEntityPersister(StreamEntityType.Submarket, persister, cancellationToken, 1, persistSynchronously, 50, 100);
             //_streamEntityPersisters[(int)StreamEntityType.Instrument] = new StreamEntityPersister(StreamEntityType.Instrument, persister, cancellationToken, 1, persistSynchronously, 50, 100);
             //_streamEntityPersisters[(int)StreamEntityType.Portfolio] = new StreamEntityPersister(StreamEntityType.Portfolio, persister, cancellationToken, 1, persistSynchronously, 50, 100);
@@ -28,8 +28,9 @@ namespace RealtimePersister
             //_streamEntityPersisters[(int)StreamEntityType.Order] = new StreamEntityPersister(StreamEntityType.Order, persister, cancellationToken, 1, persistSynchronously, 50, 100);
             //_streamEntityPersisters[(int)StreamEntityType.Rule] = new StreamEntityPersister(StreamEntityType.Rule, persister, cancellationToken, 1, persistSynchronously, 50, 100);
             _streamEntityPersisters[(int)StreamEntityType.Price] = new StreamEntityPersister(StreamEntityType.Price, persister, cancellationToken, 250, persistSynchronously, 50, 100);
-            //_streamEntityPersisters[(int)StreamEntityType.Trade] = new StreamEntityPersister(StreamEntityType.Trade, persister, cancellationToken, 1, persistSynchronously, 50, 100);
-
+#endif
+#if false
+#endif
             return ret;
         }
 
@@ -40,7 +41,7 @@ namespace RealtimePersister
                 Task.CompletedTask);
         }
 
-        #region Get functions
+#region Get functions
         public Task<IEnumerable<StreamMarket>> GetAllMarkets()
         {
             return (_persister != null ? _persister.GetAll<StreamMarket>(StreamEntityType.Market) : Task.FromResult<IEnumerable<StreamMarket>>(null));
