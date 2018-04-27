@@ -1,4 +1,5 @@
-﻿using RealtimePersister.Models.Simulation;
+﻿using RealtimePersister.CosmosDb;
+using RealtimePersister.Models.Simulation;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,8 +27,8 @@ namespace RealtimePersister
 
             // Persister Factory
             IStreamPersisterFactory persisterFactory = new SqlStreamPersisterFactory();
+            //IStreamPersisterFactory persisterFactory = new CosmosDbStreamPersisterFactory();
             //IStreamPersisterFactory persisterFactory = new RealtimePersister.Redis.StreamPersisterFactory("pb-syncweek-redis.redis.cache.windows.net:6380,password=IG1aBMjxzo0uE106LJT+Ceigc1AZldzwd9HYDDKIdBc=,ssl=True,abortConnect=False");
-            //IStreamPersisterFactory persisterFactory = new RealtimePersister.Redis.StreamPersisterFactory("localhost");
             IStreamPersister persister = null;
 
             if (persisterFactory != null)
@@ -50,10 +51,20 @@ namespace RealtimePersister
                 var marketNoCopy = marketNo;
                 marketTasks[marketNoCopy - startMarketNo] = Task.Run(async () =>
                 {
-                    await _simulationLayer.SimulatePrices(cancellationToken, marketNoCopy, numPriceUpdatesPerSecond);
                 });
             }
             await Task.WhenAll(marketTasks);
+            
+            for (int marketNo = 0; marketNo < numThreads; marketNo++)
+            {
+                var marketNoCopy = marketNo;
+                marketTasks[marketNoCopy] = Task.Run(async () =>
+                {
+                    await _simulationLayer.SimulatePrices(cancellationToken, marketNoCopy, numPriceUpdatesPerSecond, persister);
+                });
+            }
+            await Task.WhenAll(marketTasks);
+            
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -71,6 +72,8 @@ namespace RealtimePersister.Models.Streams
         [DataMember]
         [ProtoMember(6)]
         public DateTime Date { get; set; } = DateTime.UtcNow;
+
+        public int PartitionKey { get; set; }
 
         public string ToJsonString()
         {
@@ -150,5 +153,20 @@ namespace RealtimePersister.Models.Streams
         {
             return Serializer.Deserialize<StreamEntityBase>(s);
         }
-    }
+
+        public virtual Dictionary<string, object> ToKeyValueDictionary()
+        {
+            var dict = new Dictionary<string, object>
+            {
+                [nameof(StreamName)] = StreamName,
+                [nameof(SequenceNumber)] = SequenceNumber,
+                [nameof(EntityType)] = EntityType,
+                [nameof(Operation)] = Operation,
+                [nameof(Id)] = Id,
+                [nameof(Date)] = Date,
+                [nameof(PartitionKey)] = PartitionKey
+            };
+            return dict;
+        }
+}
 }

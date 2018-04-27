@@ -44,6 +44,7 @@ namespace RealtimePersister
                     lockState = Interlocked.CompareExchange(ref _lockState, 2, 0);
                 }
 
+                item.PartitionKey = _partitionKey;
                 var pendingItems = PendingItems;
                 lock (this)
                 {

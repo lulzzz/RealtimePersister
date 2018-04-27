@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using ProtoBuf;
 using System.Runtime.Serialization;
+using System.Collections.Generic;
 
 namespace RealtimePersister.Models.Streams
 {
@@ -49,6 +50,14 @@ namespace RealtimePersister.Models.Streams
                 return ret;
             ret = (PriceDate != other.PriceDate ? PriceDate > other.PriceDate ? 1 : -1 : 0);
             return ret;
+        }
+
+        public override Dictionary<string, object> ToKeyValueDictionary()
+        {
+            var dict = base.ToKeyValueDictionary();
+            dict[nameof(PriceLatest)] = PriceLatest;
+            dict[nameof(PriceDate)] = PriceDate;
+            return dict;
         }
     }
 }

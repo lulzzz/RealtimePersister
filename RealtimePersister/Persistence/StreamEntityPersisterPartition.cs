@@ -58,6 +58,18 @@ namespace RealtimePersister
             return totalLatency;
         }
 
+        static public double GetStoredLatency(IEnumerable<Dictionary<string, object>> items)
+        {
+            var now = DateTime.UtcNow;
+            double totalLatency = 0.0;
+
+            foreach (var item in items)
+            {
+                totalLatency += (now - ((DateTime)item[nameof(StreamEntityBase.Date)])).TotalMilliseconds;
+            }
+            return totalLatency;
+        }
+
         public void ReportLatency(StoredLatency storedLatency)
         {
             lock (_lockObject)

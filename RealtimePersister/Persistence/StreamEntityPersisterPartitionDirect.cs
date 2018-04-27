@@ -25,6 +25,7 @@ namespace RealtimePersister
                     _currentNumItemsInBatch = 0;
                 }
 
+                item.PartitionKey = _partitionKey;
                 var result = (item.Operation == StreamOperation.Insert || item.Operation == StreamOperation.Update ? _persister.Upsert(item, _batch) : _persister.Delete(item, _batch));
                 if (_batch != null)
                 {

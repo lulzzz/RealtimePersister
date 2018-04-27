@@ -30,6 +30,7 @@ namespace RealtimePersister.Models.Simulation
             return new StreamPrice()
             {
                 Id = "Price:" + Id.Substring(11),
+                //Id = Guid.NewGuid().ToString(),
                 PriceLatest = PriceLatest,
                 PriceDate = PriceDate,
                 Operation = operation

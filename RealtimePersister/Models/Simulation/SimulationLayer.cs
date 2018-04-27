@@ -220,7 +220,7 @@ namespace RealtimePersister.Models.Simulation
             public Submarket Submarket { get; set; }
         }
 
-        public Task SimulatePrices(CancellationToken cancellationToken, int marketNo, int priceUpdatesPerSecond)
+        public Task SimulatePrices(CancellationToken cancellationToken, int marketNo, int priceUpdatesPerSecond, IStreamPersister persister)
         {
             return Task.Run(async () =>
             {
