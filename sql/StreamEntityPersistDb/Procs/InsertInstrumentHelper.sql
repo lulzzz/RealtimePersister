@@ -1,0 +1,6 @@
+﻿CREATE PROCEDURE [dbo].[InsertInstrumentHelper](@Id INT, @SubmarketId INT, @Name NVARCHAR(50), @Timestamp DATETIME)
+WITH NATIVE_COMPILATION, SCHEMABINDING, EXECUTE AS OWNER 
+AS BEGIN ATOMIC WITH (TRANSACTION ISOLATION LEVEL = SNAPSHOT,LANGUAGE = N'English')
+	INSERT INTO dbo.Instrument(Id, SubmarketId, Name, Timestamp) VALUES (@Id, @SubmarketId, @Name, @Timestamp)
+	RETURN 0
+END

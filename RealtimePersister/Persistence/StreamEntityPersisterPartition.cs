@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -40,6 +41,19 @@ namespace RealtimePersister
             foreach (var item in items)
             {
                 totalLatency += (now - item.Date).TotalMilliseconds;
+            }
+            return totalLatency;
+        }
+
+        static public double GetStoredLatency(DataTable dataTable)
+        {
+            var now = DateTime.UtcNow;
+            double totalLatency = 0.0;
+
+            foreach (var row in dataTable.Rows) {
+                var dataRow = row as DataRow;
+                var timestamp = dataRow.Field<DateTime>("Timestamp");
+                totalLatency += (now - timestamp).TotalMilliseconds;
             }
             return totalLatency;
         }

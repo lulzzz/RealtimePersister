@@ -101,6 +101,7 @@
     <Compile Include="Redis\RedisStreamPersister.cs" />
     <Compile Include="Redis\RedisStreamPersisterFactory.cs" />
     <Compile Include="SimulationReceiver.cs" />
+    <Compile Include="Sql\SqlStreamPersister.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
