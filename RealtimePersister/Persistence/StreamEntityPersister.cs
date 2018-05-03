@@ -21,7 +21,7 @@ namespace RealtimePersister
                     _partitions[partitionKey] = new StreamEntityPersisterPartitionDirect(persister, entityType, partitionKey, 100);
                 else
                 {
-                    var persisterPartition = new StreamEntityPersisterPartitionQueueInMemory(persister, entityType, partitionKey, holdOffBusy, holdOffIdle);
+                    var persisterPartition = new StreamEntityPersisterPartitionAggregateQueueInMemory(persister, entityType, partitionKey, holdOffBusy, holdOffIdle);
                     _partitions[partitionKey] = persisterPartition;
                     persisterPartition.ProcessPendingItems(cancellationToken);
                 }

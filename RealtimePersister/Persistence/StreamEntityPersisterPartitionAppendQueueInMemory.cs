@@ -2,20 +2,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RealtimePersister
+namespace RealtimePersister.Persistence
 {
-    public class StreamEntityPersisterPartitionQueueInMemory : StreamEntityPersisterPartitionQueue
+    public class StreamEntityPersisterPartitionAppendQueueInMemory : StreamEntityPersisterPartitionQueue
     {
-        private Dictionary<string, StreamEntityPersisterItem> _dict1 =
-            new Dictionary<string, StreamEntityPersisterItem>();
-        private Dictionary<string, StreamEntityPersisterItem> _dict2 =
-            new Dictionary<string, StreamEntityPersisterItem>();
-        private bool _dict1IsPending = true;
-        private Dictionary<string, StreamEntityPersisterItem> PendingItems { get { return (_dict1IsPending ? _dict1 : _dict2); } }
-        private Dictionary<string, StreamEntityPersisterItem> ProcessItems { get { return (_dict1IsPending ? _dict2 : _dict1); } }
+        private List<StreamEntityBase> _queue1 = new List<StreamEntityBase>();
+        private List<StreamEntityBase> _queue2 = new List<StreamEntityBase>();
+        private bool _queue1IsPending = true;
+        private List<StreamEntityBase> PendingItems { get { return (_queue1IsPending ? _queue1 : _queue2); } }
+        private List<StreamEntityBase> ProcessItems { get { return (_queue1IsPending ? _queue2 : _queue1); } }
         private int _lockState = 0; // Idle = 0, Switching = 1, Adding = 2
 
         static private int _numUpserts;
@@ -25,7 +24,7 @@ namespace RealtimePersister
         static long _reportingRunning;
         static private DateTime _lastReported = DateTime.UtcNow;
 
-        public StreamEntityPersisterPartitionQueueInMemory(IStreamPersister persister, StreamEntityType entityType, int partitionKey, int holdOffBusy = 0, int holdOffIdle = 100)
+        public StreamEntityPersisterPartitionAppendQueueInMemory(IStreamPersister persister, StreamEntityType entityType, int partitionKey, int holdOffBusy = 0, int holdOffIdle = 100)
             : base(persister, entityType, partitionKey, holdOffBusy, holdOffIdle)
         {
             var reportingRunning = Interlocked.Exchange(ref _reportingRunning, 1);
@@ -48,12 +47,7 @@ namespace RealtimePersister
                 var pendingItems = PendingItems;
                 lock (this)
                 {
-                    pendingItems[item.Id] = new StreamEntityPersisterItem()
-                    {
-                        UpsertItem = (item.Operation == StreamOperation.Insert ||
-                                        item.Operation == StreamOperation.Update ? item : null),
-                        DeleteItem = (item.Operation == StreamOperation.Delete ? item : null)
-                    };
+                    pendingItems.Add(item);
                 }
 
                 if (item.Operation == StreamOperation.Insert || item.Operation == StreamOperation.Update)
@@ -75,47 +69,39 @@ namespace RealtimePersister
                 SwitchDictionaries();
                 Interlocked.Increment(ref _numSwitchDirectories);
                 var processItems = ProcessItems;
-                while (processItems.Values.Any())
+                while (processItems.Any())
                 {
                     int storedItems = 0;
                     IStreamPersisterBatch batch = null;
 
-                    while (processItems.Values.Any() && !cancellationToken.IsCancellationRequested)
+                    if (_persister != null)
                     {
-                        if (_persister != null)
+                        foreach (var item in processItems)
                         {
                             if (_persister.SupportsBatches && batch == null)
                                 batch = await _persister.CreateBatch(_entityType);
 
-                            var processItemPair = processItems.First();
-                            if (processItems.Remove(processItemPair.Key))
-                            {
-                                StoredLatency storedLatency;
-                                if (processItemPair.Value.DeleteItem != null)
-                                    storedLatency = await _persister.Delete(processItemPair.Value.DeleteItem, batch);
-                                else if (processItemPair.Value.UpsertItem != null)
-                                    storedLatency = await _persister.Upsert(processItemPair.Value.UpsertItem, batch);
-                                else
-                                    storedLatency = new StoredLatency() { NumItems = 0, Time = 0.0 };
-                                ReportLatency(storedLatency);
-                                storedItems++;
-                                anyDataProcessed = true;
+                            StoredLatency storedLatency;
+                            if (item.Operation == StreamOperation.Insert || item.Operation == StreamOperation.Update)
+                                storedLatency = await _persister.Upsert(item, batch);
+                            else
+                                storedLatency = await _persister.Delete(item, batch);
+                            ReportLatency(storedLatency);
+                            storedItems++;
+                            anyDataProcessed = true;
 
-                                Interlocked.Increment(ref _numProcessedItems);
-                            }
-                        }
-                        else
-                        {
-                            Interlocked.Add(ref _numProcessedItems, processItems.Count);
-                            processItems.Clear();
+                            Interlocked.Increment(ref _numProcessedItems);
                         }
                     }
+                    else
+                        Interlocked.Add(ref _numProcessedItems, processItems.Count);
 
                     if (batch != null)
                     {
                         var storedLatency = await batch.Commit();
                         ReportLatency(storedLatency);
                     }
+                    processItems.Clear();
                 }
 
                 DisplayLatency();
@@ -132,7 +118,7 @@ namespace RealtimePersister
                 lockState = Interlocked.CompareExchange(ref _lockState, 1, 0);
             }
 
-            _dict1IsPending = !_dict1IsPending;
+            _queue1IsPending = !_queue1IsPending;
             Interlocked.Exchange(ref _lockState, 0);
         }
 
@@ -151,7 +137,7 @@ namespace RealtimePersister
                         var numProcessedItems = Interlocked.Exchange(ref _numProcessedItems, 0);
                         var numSwitchedDirectories = Interlocked.Exchange(ref _numSwitchDirectories, 0);
 
-                        Console.WriteLine($"In-memory persister queue: {numProcessedItems / 10} processed items /sec, {numUpserts / 10} upserts /sec, {numDeletes / 10} deletes /sec, {numSwitchedDirectories / 10} switch directories / sec");
+                        Console.WriteLine($"In-memory aggregate persister queue: {numProcessedItems / 10} processed items /sec, {numUpserts / 10} upserts /sec, {numDeletes / 10} deletes /sec, {numSwitchedDirectories / 10} switch directories / sec");
                         _lastReported = now;
                     }
 
@@ -159,5 +145,6 @@ namespace RealtimePersister
                 }
             });
         }
+
     }
 }

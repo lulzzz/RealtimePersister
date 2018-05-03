@@ -100,9 +100,10 @@
     <Compile Include="PersistenceLayer.cs" />
     <Compile Include="Persistence\StreamEntityPersister.cs" />
     <Compile Include="Persistence\StreamEntityPersisterPartition.cs" />
+    <Compile Include="Persistence\StreamEntityPersisterPartitionAppendQueueInMemory.cs" />
     <Compile Include="Persistence\StreamEntityPersisterPartitionDirect.cs" />
     <Compile Include="Persistence\StreamEntityPersisterPartitionQueue.cs" />
-    <Compile Include="Persistence\StreamEntityPersisterPartitionQueueInMemory.cs" />
+    <Compile Include="Persistence\StreamEntityPersisterPartitionAggregateQueueInMemory.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Redis\RedisStreamPersisterBatch.cs" />
